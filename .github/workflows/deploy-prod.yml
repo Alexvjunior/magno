@@ -14,6 +14,7 @@ env:
   STACK_AUTH: ${{ vars.STACK_AUTH_PROD || 'claud-auth-prod' }}
   STACK_CORE: ${{ vars.STACK_CORE_PROD || 'claud-core-prod' }}
   STACK_FRONTEND: ${{ vars.STACK_FRONTEND_PROD || 'claud-frontend-prod' }}
+  SAM_ARTIFACT_BUCKET: ${{ vars.SAM_ARTIFACT_BUCKET || 'claud-sam-deploy-572391417849-us-east-1' }}
   APP_NAME: ${{ vars.APP_NAME || 'claud' }}
   ENVIRONMENT: prod
 
@@ -61,7 +62,8 @@ jobs:
           sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
             --stack-name $STACK_AUTH \
             --capabilities CAPABILITY_IAM \
-            --resolve-s3 \
+            --s3-bucket $SAM_ARTIFACT_BUCKET \
+            --no-resolve-s3 \
             --parameter-overrides Environment=$ENVIRONMENT AppName=$APP_NAME
 
       - name: Read auth stack outputs
@@ -83,7 +85,8 @@ jobs:
           sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
             --stack-name $STACK_CORE \
             --capabilities CAPABILITY_IAM \
-            --resolve-s3 \
+            --s3-bucket $SAM_ARTIFACT_BUCKET \
+            --no-resolve-s3 \
             --parameter-overrides \
               Environment=$ENVIRONMENT \
               AppName=$APP_NAME \
