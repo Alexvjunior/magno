@@ -39,24 +39,24 @@ jobs:
         id: layers
         run: |
           set -euo pipefail
-          (cd claud/backend/layers/deps-layer && bash build.sh)
+          (cd backend/layers/deps-layer && bash build.sh)
           DEPS_ARN=$(aws lambda publish-layer-version \
             --layer-name claud-deps \
             --compatible-runtimes python3.12 \
-            --zip-file fileb://claud/backend/layers/deps-layer/claud-deps.zip \
+            --zip-file fileb://backend/layers/deps-layer/claud-deps.zip \
             --query 'LayerVersionArn' --output text)
           echo "deps_arn=$DEPS_ARN" >> "$GITHUB_OUTPUT"
-          (cd claud/backend/layers/xlsx-layer && bash build.sh)
+          (cd backend/layers/xlsx-layer && bash build.sh)
           XLSX_ARN=$(aws lambda publish-layer-version \
             --layer-name claud-xlsx \
             --compatible-runtimes python3.12 \
-            --zip-file fileb://claud/backend/layers/xlsx-layer/claud-xlsx.zip \
+            --zip-file fileb://backend/layers/xlsx-layer/claud-xlsx.zip \
             --query 'LayerVersionArn' --output text)
           echo "xlsx_arn=$XLSX_ARN" >> "$GITHUB_OUTPUT"
 
       - name: Deploy auth stack
         run: |
-          cd claud/backend/auth
+          cd backend/auth
           sam build
           sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
             --stack-name $STACK_AUTH \
@@ -78,7 +78,7 @@ jobs:
 
       - name: Deploy core stack
         run: |
-          cd claud/backend/core
+          cd backend/core
           sam build
           sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
             --stack-name $STACK_CORE \
@@ -105,7 +105,7 @@ jobs:
         run: |
           aws cloudformation deploy \
             --stack-name $STACK_FRONTEND \
-            --template-file claud/infra/frontend-template.yaml \
+            --template-file infra/frontend-template.yaml \
             --parameter-overrides Environment=$ENVIRONMENT AppName=$APP_NAME \
             --no-fail-on-empty-changeset
 
@@ -144,10 +144,10 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: claud/frontend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Build frontend
-        working-directory: claud/frontend
+        working-directory: frontend
         env:
           VITE_USE_MOCK: 'false'
           VITE_API_URL: ${{ steps.core.outputs.api_url }}
@@ -160,11 +160,11 @@ jobs:
 
       - name: Sync frontend to S3
         run: |
-          aws s3 sync claud/frontend/dist s3://${{ steps.frontend.outputs.bucket }}/ \
+          aws s3 sync frontend/dist s3://${{ steps.frontend.outputs.bucket }}/ \
             --delete \
             --exclude "assets/*" \
             --cache-control "no-cache"
-          aws s3 sync claud/frontend/dist/assets s3://${{ steps.frontend.outputs.bucket }}/assets/ \
+          aws s3 sync frontend/dist/assets s3://${{ steps.frontend.outputs.bucket }}/assets/ \
             --delete \
             --cache-control "public,max-age=31536000,immutable"
           aws cloudfront create-invalidation \
