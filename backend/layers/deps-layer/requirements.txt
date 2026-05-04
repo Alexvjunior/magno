@@ -1,0 +1,3 @@
+# Light deps shared across all handlers.
+# boto3 is provided by the Lambda runtime — keep this layer minimal.
+python-dateutil==2.9.0.post0

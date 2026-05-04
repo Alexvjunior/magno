@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: claud — Root stack (auth + core)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+  AppName:
+    Type: String
+    Default: claud
+  AwsRegion:
+    Type: String
+    Default: us-east-1
+  DepsLayerArn:
+    Type: String
+  XlsxLayerArn:
+    Type: String
+
+Resources:
+  AuthStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ../backend/auth/template.yaml
+      Parameters:
+        Environment: !Ref Environment
+        AppName: !Ref AppName
+
+  CoreStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ../backend/core/template.yaml
+      Parameters:
+        Environment: !Ref Environment
+        AppName: !Ref AppName
+        AwsRegion: !Ref AwsRegion
+        UserPoolId: !GetAtt AuthStack.Outputs.UserPoolId
+        UserPoolClientId: !GetAtt AuthStack.Outputs.UserPoolClientId
+        DepsLayerArn: !Ref DepsLayerArn
+        XlsxLayerArn: !Ref XlsxLayerArn
+
+Outputs:
+  ApiUrl:
+    Value: !GetAtt CoreStack.Outputs.ApiUrl
+  UserPoolId:
+    Value: !GetAtt AuthStack.Outputs.UserPoolId
+  UserPoolClientId:
+    Value: !GetAtt AuthStack.Outputs.UserPoolClientId

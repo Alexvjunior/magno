@@ -1,0 +1,176 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: claud — Core (API GW + Lambdas + DynamoDB + S3)
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+  AppName:
+    Type: String
+    Default: claud
+  UserPoolId:
+    Type: String
+    Description: Cognito User Pool ID (output do stack auth)
+  UserPoolClientId:
+    Type: String
+    Description: Cognito User Pool Client ID
+  AwsRegion:
+    Type: String
+    Default: us-east-1
+  DepsLayerArn:
+    Type: String
+    Description: ARN da deps-layer publicada
+  XlsxLayerArn:
+    Type: String
+    Description: ARN da xlsx-layer publicada
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 15
+    MemorySize: 256
+    Tracing: Active
+    Environment:
+      Variables:
+        DDB_TABLE: !Ref DesocupacoesTable
+        EXPORTS_BUCKET: !Ref ExportsBucket
+
+Resources:
+  DesocupacoesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AppName}-${Environment}-desocupacoes
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  ExportsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AppName}-${Environment}-exports-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldExports
+            Status: Enabled
+            ExpirationInDays: 30
+            Prefix: exports/
+
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowHeaders: ['Content-Type', 'Authorization']
+        AllowMethods: ['GET', 'POST', 'OPTIONS']
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub https://cognito-idp.${AwsRegion}.amazonaws.com/${UserPoolId}
+              audience:
+                - !Ref UserPoolClientId
+            IdentitySource: $request.header.Authorization
+        DefaultAuthorizer: CognitoAuthorizer
+
+  CreateDesocupacaoFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppName}-${Environment}-create-desocupacao
+      CodeUri: .
+      Handler: handlers.create_desocupacao.handler
+      Layers:
+        - !Ref DepsLayerArn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DesocupacoesTable
+      Events:
+        CreateDesoc:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /desocupacoes
+
+  ListDesocupacoesFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppName}-${Environment}-list-desocupacoes
+      CodeUri: .
+      Handler: handlers.list_desocupacoes.handler
+      Layers:
+        - !Ref DepsLayerArn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DesocupacoesTable
+      Events:
+        ListDesoc:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /desocupacoes
+
+  ExportXlsxFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppName}-${Environment}-export-xlsx
+      CodeUri: .
+      Handler: handlers.export_xlsx.handler
+      Timeout: 60
+      MemorySize: 512
+      Layers:
+        - !Ref DepsLayerArn
+        - !Ref XlsxLayerArn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DesocupacoesTable
+        - S3CrudPolicy:
+            BucketName: !Ref ExportsBucket
+      Events:
+        ExportXlsx:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /desocupacoes/export
+
+Outputs:
+  ApiUrl:
+    Description: URL base do HTTP API
+    Value: !Sub https://${HttpApi}.execute-api.${AwsRegion}.amazonaws.com
+    Export:
+      Name: !Sub ${AppName}-${Environment}-ApiUrl
+  TableName:
+    Value: !Ref DesocupacoesTable
+  ExportsBucketName:
+    Value: !Ref ExportsBucket

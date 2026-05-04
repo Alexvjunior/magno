@@ -1,0 +1,2 @@
+# Runtime deps for handlers — boto3 already provided by Lambda runtime.
+# Heavy stuff lives in layers; nothing pinned here for now.

@@ -1,0 +1,7 @@
+{
+  "Environment": "prod",
+  "AppName": "claud",
+  "AwsRegion": "us-east-1",
+  "DepsLayerArn": "REPLACE_WITH_PUBLISHED_LAYER_ARN",
+  "XlsxLayerArn": "REPLACE_WITH_PUBLISHED_LAYER_ARN"
+}
