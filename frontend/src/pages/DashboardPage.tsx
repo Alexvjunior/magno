@@ -21,7 +21,7 @@ export default function DashboardPage() {
             className="dashboard-frame"
             loading="lazy"
             allowFullScreen
-            sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+            sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox allow-downloads"
           />
         </section>
       </main>
