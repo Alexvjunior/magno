@@ -187,6 +187,26 @@ def _from_item(item: dict) -> Desocupacao:
     )
 
 
+def _from_imovel_item(item: dict) -> Imovel:
+    return Imovel(
+        id_imovel=_text(item.get("idImovel"), "sem-id"),
+        cidade=_text(item.get("cidade")),
+        edificio=_text(item.get("edificio")),
+        numero_apto=_text(item.get("numeroApto")),
+        area_privativa=_float(item.get("areaPrivativa")),
+        tipologia=_text(item.get("tipologia"), "Studio"),  # type: ignore[arg-type]
+        uso=_uso(item.get("uso")),  # type: ignore[arg-type]
+        mobiliado=_text(item.get("mobiliado"), "Não"),  # type: ignore[arg-type]
+        status_atual=_text(item.get("statusAtual"), "Vago"),  # type: ignore[arg-type]
+        valor_aluguel_atual=_float(item.get("valorAluguelAtual")),
+        data_ultima_locacao=_date(item.get("dataUltimaLocacao")),
+        data_ultima_desocupacao=_date(item.get("dataUltimaDesocupacao")),
+        dias_vacancia_atual=_int(item.get("diasVacanciaAtual")),
+        criado_por=_text(item.get("criadoPor"), "legacy"),
+        criado_em=_text(item.get("criadoEm"), "1970-01-01T00:00:00Z"),
+    )
+
+
 def put(d: Desocupacao) -> None:
     _table.put_item(Item=_to_item(d))
 
@@ -210,6 +230,27 @@ def put_imovel(imovel: Imovel) -> None:
         if exc.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
             raise DuplicateImovelError from exc
         raise
+
+
+def list_imoveis(limit: int = 200) -> list[Imovel]:
+    items: list[dict] = []
+    last = None
+    while True:
+        kwargs: dict[str, Any] = {
+            "KeyConditionExpression": Key("PK").eq(f"TENANT#{TENANT_ID}")
+            & Key("SK").begins_with("IMOVEL#"),
+        }
+        if last:
+            kwargs["ExclusiveStartKey"] = last
+        resp = _table.query(**kwargs)
+        items.extend(resp.get("Items", []))
+        last = resp.get("LastEvaluatedKey")
+        if not last:
+            break
+
+    records = [_from_imovel_item(item) for item in items]
+    records.sort(key=lambda item: (item.criado_em, item.id_imovel), reverse=True)
+    return records[:limit]
 
 
 def list_by_month(year: int, month: int) -> list[Desocupacao]:

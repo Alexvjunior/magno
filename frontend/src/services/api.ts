@@ -7,6 +7,7 @@ export interface ApiService {
   createDesocupacao(input: DesocupacaoInput): Promise<Desocupacao>;
   createImovel(input: ImovelInput): Promise<Imovel>;
   listDesocupacoes(params?: { ano?: number; mes?: number }): Promise<Desocupacao[]>;
+  listImoveis(): Promise<Imovel[]>;
   exportXlsx(params?: { ano?: number; mes?: number }): Promise<{ url: string; filename: string }>;
   removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }>;
 }
@@ -63,6 +64,10 @@ class HttpApi implements ApiService {
     if (params.mes) qs.set('mes', String(params.mes));
     const suffix = qs.toString() ? `?${qs}` : '';
     return this.request<Desocupacao[]>(`/desocupacoes${suffix}`);
+  }
+
+  listImoveis(): Promise<Imovel[]> {
+    return this.request<Imovel[]>('/imoveis');
   }
 
   exportXlsx(params: { ano?: number; mes?: number } = {}): Promise<{ url: string; filename: string }> {

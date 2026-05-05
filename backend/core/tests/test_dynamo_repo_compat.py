@@ -1,4 +1,5 @@
 import os
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 from unittest.mock import Mock
@@ -138,6 +139,26 @@ def test_to_imovel_item_uses_imovel_entity_key():
     assert item["dataUltimaDesocupacao"] == "2025-05-01"
 
 
+def test_from_imovel_item_maps_current_contract():
+    out = dynamo_repo._from_imovel_item(dynamo_repo._to_imovel_item(_imovel()))
+
+    assert out.id_imovel == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
+    assert out.cidade == "Florianopolis"
+    assert out.edificio == "Plaza Mediterraneo"
+    assert out.numero_apto == "326"
+    assert out.area_privativa == 72.5
+    assert out.tipologia == "2Q"
+    assert out.uso == "Residencial"
+    assert out.mobiliado == _imovel().mobiliado
+    assert out.status_atual == "Vago"
+    assert out.valor_aluguel_atual == 4300.0
+    assert out.data_ultima_locacao.isoformat() == "2025-02-10"
+    assert out.data_ultima_desocupacao.isoformat() == "2025-05-01"
+    assert out.dias_vacancia_atual == 12
+    assert out.criado_por == "user-1"
+    assert out.to_api_dict()["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
+
+
 def test_put_imovel_uses_conditional_put(monkeypatch):
     table = Mock()
     monkeypatch.setattr(dynamo_repo, "_table", table)
@@ -173,6 +194,37 @@ def test_imovel_exists_by_id_returns_false_when_missing(monkeypatch):
     monkeypatch.setattr(dynamo_repo, "_table", table)
 
     assert dynamo_repo.imovel_exists_by_id("FLORIANOPOLIS|PLAZA MEDITERRANEO|326") is False
+
+
+def test_list_imoveis_queries_prefix_pages_and_sorts_by_criado_em(monkeypatch):
+    older = replace(
+        _imovel(),
+        id_imovel="FLORIANOPOLIS|PLAZA MEDITERRANEO|326",
+        criado_em="2025-05-01T12:00:00Z",
+    )
+    newer = replace(
+        _imovel(),
+        id_imovel="SAO JOSE|RESIDENCIAL ILHA|1201",
+        criado_em="2025-05-03T12:00:00Z",
+    )
+    table = Mock()
+    table.query.side_effect = [
+        {
+            "Items": [dynamo_repo._to_imovel_item(older)],
+            "LastEvaluatedKey": {"PK": "TENANT#default", "SK": "IMOVEL#OLD"},
+        },
+        {"Items": [dynamo_repo._to_imovel_item(newer)]},
+    ]
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    out = dynamo_repo.list_imoveis(limit=1)
+
+    assert [item.id_imovel for item in out] == ["SAO JOSE|RESIDENCIAL ILHA|1201"]
+    assert table.query.call_count == 2
+    first_call = table.query.call_args_list[0].kwargs
+    second_call = table.query.call_args_list[1].kwargs
+    assert "KeyConditionExpression" in first_call
+    assert second_call["ExclusiveStartKey"] == {"PK": "TENANT#default", "SK": "IMOVEL#OLD"}
 
 
 def test_put_imovel_raises_duplicate_for_conditional_failure(monkeypatch):

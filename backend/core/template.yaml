@@ -194,6 +194,25 @@ Resources:
             Method: GET
             Path: /desocupacoes
 
+  ListImoveisFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppName}-${Environment}-list-imoveis
+      CodeUri: .
+      Handler: handlers.list_imoveis.handler
+      Layers:
+        - !Ref DepsLayerArn
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DesocupacoesTable
+      Events:
+        ListImoveis:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: GET
+            Path: /imoveis
+
   DeleteDesocupacaoFn:
     Type: AWS::Serverless::Function
     Properties:

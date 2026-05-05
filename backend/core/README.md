@@ -6,6 +6,7 @@
 |--------|-------------------------------|------|
 | POST   | `/desocupacoes`               | JWT  |
 | POST   | `/imoveis`                    | JWT  |
+| GET    | `/imoveis`                    | JWT  |
 | GET    | `/desocupacoes?ano=&mes=`     | JWT  |
 | DELETE | `/desocupacoes/{id}?dataEvento=YYYY-MM-DD` | JWT |
 | GET    | `/desocupacoes/export?ano=&mes=` | JWT |

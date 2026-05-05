@@ -131,6 +131,10 @@ export const mockApi: ApiService = {
     });
   },
 
+  async listImoveis(): Promise<Imovel[]> {
+    return loadAllImoveis().sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+  },
+
   async exportXlsx(params: { ano?: number; mes?: number } = {}): Promise<{ url: string; filename: string }> {
     const items = await mockApi.listDesocupacoes(params);
     const csv = toCsv(items);

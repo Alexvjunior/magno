@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import AppHeader from '../components/AppHeader';
 import { apiService } from '../services/api';
 import {
-  buildIdImovel,
   imovelSchema,
   mobiliadoValues,
   normalizeImovelText,
@@ -12,7 +11,7 @@ import {
   tipologiaImovelValues,
   type ImovelForm,
 } from '../services/schemas';
-import type { ImovelInput } from '../types';
+import type { Imovel, ImovelInput } from '../types';
 
 const emptyValues: ImovelForm = {
   cidade: '',
@@ -34,6 +33,7 @@ type CadastroImoveisContentProps = {
 };
 
 export function CadastroImoveisContent({ embedded = false }: CadastroImoveisContentProps) {
+  const [items, setItems] = useState<Imovel[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -41,18 +41,24 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<ImovelForm>({
     resolver: zodResolver(imovelSchema),
     defaultValues: emptyValues,
   });
 
-  const idPreview = buildIdImovel(
-    watch('cidade') ?? '',
-    watch('edificio') ?? '',
-    watch('numeroApto') ?? '',
-  );
+  async function refresh() {
+    try {
+      const list = await apiService.listImoveis();
+      setItems(list.slice(0, 20));
+    } catch (e) {
+      setServerError(e instanceof Error ? e.message : 'Falha ao carregar lista de imoveis');
+    }
+  }
+
+  useEffect(() => {
+    refresh();
+  }, []);
 
   async function onSubmit(values: ImovelForm) {
     setServerError(null);
@@ -69,6 +75,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
       const created = await apiService.createImovel(input);
       setSuccess(`Imovel ${created.idImovel} cadastrado.`);
       reset(emptyValues);
+      refresh();
     } catch (e) {
       setServerError(e instanceof Error ? e.message : 'Falha ao cadastrar imovel');
     }
@@ -85,11 +92,6 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="row">
             <div className="field">
-              <label htmlFor="idImovel">ID_Imovel</label>
-              <input id="idImovel" value={idPreview} readOnly />
-            </div>
-
-            <div className="field">
               <label htmlFor="cidadeImovel">Cidade *</label>
               <input id="cidadeImovel" {...register('cidade')} />
               {errors.cidade && <span className="field-error">{errors.cidade.message}</span>}
@@ -102,7 +104,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
             </div>
 
             <div className="field">
-              <label htmlFor="numeroAptoImovel">Numero_Apto *</label>
+              <label htmlFor="numeroAptoImovel">Numero do apto *</label>
               <input id="numeroAptoImovel" inputMode="numeric" {...register('numeroApto')} />
               {errors.numeroApto && (
                 <span className="field-error">{errors.numeroApto.message}</span>
@@ -110,7 +112,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
             </div>
 
             <div className="field">
-              <label htmlFor="areaPrivativaImovel">Area_Privativa (m2) *</label>
+              <label htmlFor="areaPrivativaImovel">Area privativa (m2) *</label>
               <input
                 id="areaPrivativaImovel"
                 type="number"
@@ -161,7 +163,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
             </div>
 
             <div className="field">
-              <label htmlFor="statusAtualImovel">Status_Atual *</label>
+              <label htmlFor="statusAtualImovel">Status atual *</label>
               <select id="statusAtualImovel" {...register('statusAtual')}>
                 {statusAtualImovelValues.map((value) => (
                   <option key={value} value={value}>
@@ -175,7 +177,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
             </div>
 
             <div className="field">
-              <label htmlFor="valorAluguelAtualImovel">Valor_Aluguel_Atual (R$) *</label>
+              <label htmlFor="valorAluguelAtualImovel">Valor do aluguel atual (R$) *</label>
               <input
                 id="valorAluguelAtualImovel"
                 type="number"
@@ -189,7 +191,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
             </div>
 
             <div className="field">
-              <label htmlFor="dataUltimaLocacaoImovel">Data_Ultima_Locacao *</label>
+              <label htmlFor="dataUltimaLocacaoImovel">Data da ultima locacao *</label>
               <input
                 id="dataUltimaLocacaoImovel"
                 type="date"
@@ -201,7 +203,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
             </div>
 
             <div className="field">
-              <label htmlFor="dataUltimaDesocupacaoImovel">Data_Ultima_Desocupacao *</label>
+              <label htmlFor="dataUltimaDesocupacaoImovel">Data da ultima desocupacao *</label>
               <input
                 id="dataUltimaDesocupacaoImovel"
                 type="date"
@@ -213,7 +215,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
             </div>
 
             <div className="field">
-              <label htmlFor="diasVacanciaAtualImovel">Dias_Vacancia_Atual *</label>
+              <label htmlFor="diasVacanciaAtualImovel">Dias de vacancia atual *</label>
               <input
                 id="diasVacanciaAtualImovel"
                 type="number"
@@ -234,6 +236,59 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="section-title">
+        <h2>Ultimos imoveis ({items.length})</h2>
+      </div>
+
+      <div className="card table-card">
+        {items.length === 0 ? (
+          <div className="empty">Nenhum imovel ainda. Cadastre o primeiro acima.</div>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Cidade</th>
+                <th>Edificio</th>
+                <th>Apto</th>
+                <th>Area</th>
+                <th>Tipologia</th>
+                <th>Uso</th>
+                <th>Mobiliado</th>
+                <th>Status</th>
+                <th>Aluguel</th>
+                <th>Ult. Locacao</th>
+                <th>Ult. Desocupacao</th>
+                <th>Dias Vac.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.idImovel}>
+                  <td title={item.idImovel}>
+                    {item.idImovel.length > 44
+                      ? `${item.idImovel.slice(0, 44)}...`
+                      : item.idImovel}
+                  </td>
+                  <td>{item.cidade}</td>
+                  <td>{item.edificio}</td>
+                  <td>{item.numeroApto}</td>
+                  <td>{item.areaPrivativa.toFixed(2)}</td>
+                  <td>{item.tipologia}</td>
+                  <td>{item.uso}</td>
+                  <td>{item.mobiliado}</td>
+                  <td>{item.statusAtual}</td>
+                  <td>{item.valorAluguelAtual.toFixed(2)}</td>
+                  <td>{item.dataUltimaLocacao}</td>
+                  <td>{item.dataUltimaDesocupacao}</td>
+                  <td>{item.diasVacanciaAtual}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
