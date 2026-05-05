@@ -34,23 +34,24 @@ e-mail/senha e os cadastros ficam em `localStorage`.
 
 ## Deploy
 
-Por branch:
+O workflow `CI/CD` executa primeiro as validacoes de frontend, backend e templates SAM.
+Se todas passarem, o mesmo workflow segue para o deploy conforme a branch:
 
-- `dev` aciona `deploy-dev` e usa o ambiente AWS `dev`.
-- `main` aciona `deploy-prod` e usa o ambiente AWS `prod`.
+- `dev` faz deploy no ambiente AWS `dev`.
+- `main` faz deploy no ambiente AWS `prod`.
 
-Os workflows aceitam variaveis do GitHub (`vars`) para sobrescrever os defaults:
+O workflow aceita variaveis do GitHub (`vars`) para sobrescrever os defaults:
 `AWS_REGION`, `APP_NAME`, `AWS_DEPLOY_ROLE_ARN_DEV`, `AWS_DEPLOY_ROLE_ARN_PROD`,
 `STACK_AUTH_DEV`, `STACK_CORE_DEV`, `STACK_FRONTEND_DEV`, `STACK_AUTH_PROD`,
 `STACK_CORE_PROD` e `STACK_FRONTEND_PROD`.
 
-Os workflows tambem exigem `GOOGLE_SERVICE_ACCOUNT_SECRET_ARN`, como secret ou
+O workflow tambem exige `GOOGLE_SERVICE_ACCOUNT_SECRET_ARN`, como secret ou
 variable do GitHub Environment. Em dev, configure no environment `dev`; em prod,
 configure no environment `production`. O valor deve ser o ARN do secret no AWS
 Secrets Manager que contem o JSON da Service Account usada para escrever na
 planilha Google Sheets compartilhada.
 
-Os workflows `deploy-dev` e `deploy-prod` publicam:
+O job de deploy publica:
 
 1. Cognito (`backend/auth/template.yaml`).
 2. API, DynamoDB e bucket privado de exports (`backend/core/template.yaml`).

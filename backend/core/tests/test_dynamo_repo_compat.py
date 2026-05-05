@@ -150,6 +150,31 @@ def test_put_imovel_uses_conditional_put(monkeypatch):
     assert kwargs["ConditionExpression"] == "attribute_not_exists(PK) AND attribute_not_exists(SK)"
 
 
+def test_imovel_exists_by_id_uses_imovel_key_with_consistent_read(monkeypatch):
+    table = Mock()
+    table.get_item.return_value = {"Item": {"PK": "TENANT#default"}}
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    assert dynamo_repo.imovel_exists_by_id("FLORIANOPOLIS|PLAZA MEDITERRANEO|326") is True
+
+    table.get_item.assert_called_once_with(
+        Key={
+            "PK": "TENANT#default",
+            "SK": "IMOVEL#FLORIANOPOLIS|PLAZA MEDITERRANEO|326",
+        },
+        ConsistentRead=True,
+        ProjectionExpression="PK",
+    )
+
+
+def test_imovel_exists_by_id_returns_false_when_missing(monkeypatch):
+    table = Mock()
+    table.get_item.return_value = {}
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    assert dynamo_repo.imovel_exists_by_id("FLORIANOPOLIS|PLAZA MEDITERRANEO|326") is False
+
+
 def test_put_imovel_raises_duplicate_for_conditional_failure(monkeypatch):
     error = ClientError(
         {"Error": {"Code": "ConditionalCheckFailedException", "Message": "duplicate"}},

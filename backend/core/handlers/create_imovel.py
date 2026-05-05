@@ -13,6 +13,16 @@ from ._common import get_user_sub, json_response, parse_body
 LOGGER = logging.getLogger(__name__)
 
 
+def _duplicate_response(id_imovel: str) -> dict:
+    return json_response(
+        409,
+        {
+            "message": "Este imovel ja foi cadastrado.",
+            "idImovel": id_imovel,
+        },
+    )
+
+
 def handler(event: dict, _context) -> dict:
     payload = parse_body(event)
     try:
@@ -21,14 +31,22 @@ def handler(event: dict, _context) -> dict:
         return json_response(422, {"errors": e.errors})
 
     try:
+        if dynamo_repo.imovel_exists_by_id(validated.id_imovel):
+            return _duplicate_response(validated.id_imovel)
+    except Exception as exc:
+        LOGGER.exception("Failed to check imovel %s in DynamoDB", validated.id_imovel)
+        return json_response(
+            502,
+            {
+                "message": "Falha ao verificar imovel no DynamoDB",
+                "idImovel": validated.id_imovel,
+                "error": str(exc),
+            },
+        )
+
+    try:
         if google_sheets_repo.imovel_exists_by_id(validated.id_imovel):
-            return json_response(
-                409,
-                {
-                    "message": "Este imovel ja foi cadastrado.",
-                    "idImovel": validated.id_imovel,
-                },
-            )
+            return _duplicate_response(validated.id_imovel)
     except Exception as exc:
         LOGGER.exception("Failed to check imovel %s in Google Sheets", validated.id_imovel)
         return json_response(
@@ -61,13 +79,7 @@ def handler(event: dict, _context) -> dict:
     try:
         dynamo_repo.put_imovel(record)
     except dynamo_repo.DuplicateImovelError:
-        return json_response(
-            409,
-            {
-                "message": "Este imovel ja foi cadastrado.",
-                "idImovel": record.id_imovel,
-            },
-        )
+        return _duplicate_response(record.id_imovel)
 
     try:
         google_sheets_repo.append_imovel(record)

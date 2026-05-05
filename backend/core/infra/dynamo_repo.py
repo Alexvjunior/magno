@@ -149,6 +149,13 @@ def _item_key(record_id: str, data_evento: date) -> dict[str, str]:
     }
 
 
+def _imovel_key(id_imovel: str) -> dict[str, str]:
+    return {
+        "PK": f"TENANT#{TENANT_ID}",
+        "SK": f"IMOVEL#{id_imovel}",
+    }
+
+
 def _from_item(item: dict) -> Desocupacao:
     data_evento = _date(item.get("dataEvento", item.get("dataFim")))
     data_inicio_contrato = _date(
@@ -182,6 +189,15 @@ def _from_item(item: dict) -> Desocupacao:
 
 def put(d: Desocupacao) -> None:
     _table.put_item(Item=_to_item(d))
+
+
+def imovel_exists_by_id(id_imovel: str) -> bool:
+    resp = _table.get_item(
+        Key=_imovel_key(id_imovel),
+        ConsistentRead=True,
+        ProjectionExpression="PK",
+    )
+    return "Item" in resp
 
 
 def put_imovel(imovel: Imovel) -> None:
