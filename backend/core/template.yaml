@@ -171,11 +171,21 @@ Resources:
       FunctionName: !Sub ${AppName}-${Environment}-delete-desocupacao
       CodeUri: .
       Handler: handlers.delete_desocupacao.handler
+      Environment:
+        Variables:
+          GOOGLE_SERVICE_ACCOUNT_SECRET_ARN: !Ref GoogleServiceAccountSecretArn
+          GOOGLE_SHEETS_SPREADSHEET_ID: 1bNzVyloJJmWT9-erNjO-4sR0UNFL0Ct1r9TurN63ekA
+          GOOGLE_SHEETS_SHEET_NAME: MOVIMENTACOES
       Layers:
         - !Ref DepsLayerArn
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DesocupacoesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref GoogleServiceAccountSecretArn
       Events:
         DeleteDesoc:
           Type: HttpApi

@@ -1,6 +1,8 @@
 from datetime import date
+from unittest.mock import Mock
 
 from domain.models import Desocupacao
+from infra import google_sheets_repo
 from infra.google_sheets_repo import desocupacao_to_sheet_row
 
 
@@ -45,3 +47,58 @@ def test_desocupacao_to_sheet_row_matches_movimentacoes_order():
         7,
         2025,
     ]
+
+
+def test_delete_desocupacao_by_id_deletes_matching_sheet_row(monkeypatch):
+    service = Mock()
+    spreadsheets = service.spreadsheets.return_value
+    spreadsheets.values.return_value.get.return_value.execute.return_value = {
+        "values": [
+            ["ID_Imovel"],
+            ["other-id"],
+            ["uuid-123"],
+        ]
+    }
+    spreadsheets.get.return_value.execute.return_value = {
+        "sheets": [{"properties": {"title": "MOVIMENTACOES", "sheetId": 982801841}}]
+    }
+    spreadsheets.batchUpdate.return_value.execute.return_value = {}
+
+    monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
+    monkeypatch.setattr(google_sheets_repo, "_sheet_name", lambda: "MOVIMENTACOES")
+    monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
+
+    assert google_sheets_repo.delete_desocupacao_by_id("uuid-123") is True
+
+    spreadsheets.batchUpdate.assert_called_once_with(
+        spreadsheetId="spreadsheet-1",
+        body={
+            "requests": [
+                {
+                    "deleteDimension": {
+                        "range": {
+                            "sheetId": 982801841,
+                            "dimension": "ROWS",
+                            "startIndex": 2,
+                            "endIndex": 3,
+                        }
+                    }
+                }
+            ]
+        },
+    )
+
+
+def test_delete_desocupacao_by_id_returns_false_when_row_is_missing(monkeypatch):
+    service = Mock()
+    spreadsheets = service.spreadsheets.return_value
+    spreadsheets.values.return_value.get.return_value.execute.return_value = {
+        "values": [["ID_Imovel"], ["other-id"]]
+    }
+
+    monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
+    monkeypatch.setattr(google_sheets_repo, "_sheet_name", lambda: "MOVIMENTACOES")
+    monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
+
+    assert google_sheets_repo.delete_desocupacao_by_id("uuid-123") is False
+    spreadsheets.batchUpdate.assert_not_called()

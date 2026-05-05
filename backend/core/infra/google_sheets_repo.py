@@ -62,6 +62,60 @@ def append_desocupacao(record: Desocupacao) -> dict[str, Any]:
     )
 
 
+def delete_desocupacao_by_id(record_id: str) -> bool:
+    spreadsheet_id = _spreadsheet_id()
+    sheet_name = _sheet_name()
+    row_number = _find_row_number_by_id(spreadsheet_id, sheet_name, record_id)
+    if row_number is None:
+        LOGGER.info("Desocupacao %s not found in Google Sheets", record_id)
+        return False
+
+    sheet_id = _sheet_id(spreadsheet_id, sheet_name)
+    LOGGER.info("Deleting desocupacao %s from Google Sheets row %s", record_id, row_number)
+    _sheets_service().spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={
+            "requests": [
+                {
+                    "deleteDimension": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "dimension": "ROWS",
+                            "startIndex": row_number - 1,
+                            "endIndex": row_number,
+                        }
+                    }
+                }
+            ]
+        },
+    ).execute()
+    return True
+
+
+def _find_row_number_by_id(spreadsheet_id: str, sheet_name: str, record_id: str) -> int | None:
+    values = (
+        _sheets_service()
+        .spreadsheets()
+        .values()
+        .get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!A:A")
+        .execute()
+        .get("values", [])
+    )
+    for index, row in enumerate(values, start=1):
+        if row and str(row[0]).strip() == record_id:
+            return index
+    return None
+
+
+def _sheet_id(spreadsheet_id: str, sheet_name: str) -> int:
+    spreadsheet = _sheets_service().spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    for sheet in spreadsheet.get("sheets", []):
+        properties = sheet.get("properties", {})
+        if properties.get("title") == sheet_name:
+            return int(properties["sheetId"])
+    raise RuntimeError(f"Google Sheets tab not found: {sheet_name}")
+
+
 def _spreadsheet_id() -> str:
     return os.environ.get("GOOGLE_SHEETS_SPREADSHEET_ID", DEFAULT_SPREADSHEET_ID).strip()
 

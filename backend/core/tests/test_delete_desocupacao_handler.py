@@ -22,17 +22,23 @@ def test_handler_marks_record_as_deleted(monkeypatch):
         return True
 
     monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", mark_deleted)
+    monkeypatch.setattr(
+        delete_desocupacao.google_sheets_repo,
+        "delete_desocupacao_by_id",
+        lambda record_id: True,
+    )
 
     response = delete_desocupacao.handler(_event(), None)
     body = json.loads(response["body"])
 
     assert response["statusCode"] == 200
-    assert body == {"id": "uuid-123", "status": "DELETED"}
+    assert body == {"id": "uuid-123", "status": "DELETED", "sheetsDeleted": True}
     assert calls == [("uuid-123", "2025-07-03")]
 
 
 def test_handler_returns_400_for_invalid_date(monkeypatch):
     monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", lambda *_: True)
+    monkeypatch.setattr(delete_desocupacao.google_sheets_repo, "delete_desocupacao_by_id", lambda *_: True)
 
     response = delete_desocupacao.handler(_event(data_evento="03/07/2025"), None)
 
@@ -41,7 +47,25 @@ def test_handler_returns_400_for_invalid_date(monkeypatch):
 
 def test_handler_returns_404_when_record_does_not_exist(monkeypatch):
     monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", lambda *_: False)
+    monkeypatch.setattr(delete_desocupacao.google_sheets_repo, "delete_desocupacao_by_id", lambda *_: True)
 
     response = delete_desocupacao.handler(_event(), None)
 
     assert response["statusCode"] == 404
+
+
+def test_handler_returns_502_when_google_sheets_delete_fails_after_dynamo(monkeypatch):
+    monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", lambda *_: True)
+    monkeypatch.setattr(
+        delete_desocupacao.google_sheets_repo,
+        "delete_desocupacao_by_id",
+        lambda *_: (_ for _ in ()).throw(RuntimeError("sheets unavailable")),
+    )
+
+    response = delete_desocupacao.handler(_event(), None)
+    body = json.loads(response["body"])
+
+    assert response["statusCode"] == 502
+    assert body["dynamoDeleted"] is True
+    assert body["id"] == "uuid-123"
+    assert body["error"] == "sheets unavailable"

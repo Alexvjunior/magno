@@ -1,11 +1,14 @@
 """DELETE /desocupacoes/{id}?dataEvento= -- marks a record as deleted."""
 from __future__ import annotations
 
+import logging
 from datetime import date
 
-from infra import dynamo_repo
+from infra import dynamo_repo, google_sheets_repo
 
 from ._common import json_response
+
+LOGGER = logging.getLogger(__name__)
 
 
 def handler(event: dict, _context) -> dict:
@@ -24,4 +27,18 @@ def handler(event: dict, _context) -> dict:
     if not deleted:
         return json_response(404, {"message": "Desocupacao nao encontrada"})
 
-    return json_response(200, {"id": record_id, "status": "DELETED"})
+    try:
+        sheets_deleted = google_sheets_repo.delete_desocupacao_by_id(record_id)
+    except Exception as exc:
+        LOGGER.exception("Failed to delete desocupacao %s from Google Sheets", record_id)
+        return json_response(
+            502,
+            {
+                "message": "Desocupacao removida no DynamoDB, mas falhou ao remover do Google Sheets",
+                "dynamoDeleted": True,
+                "id": record_id,
+                "error": str(exc),
+            },
+        )
+
+    return json_response(200, {"id": record_id, "status": "DELETED", "sheetsDeleted": sheets_deleted})
