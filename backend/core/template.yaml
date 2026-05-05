@@ -55,6 +55,10 @@ Resources:
           AttributeType: S
         - AttributeName: GSI1SK
           AttributeType: S
+        - AttributeName: GSI2PK
+          AttributeType: S
+        - AttributeName: GSI2SK
+          AttributeType: S
       KeySchema:
         - AttributeName: PK
           KeyType: HASH
@@ -66,6 +70,14 @@ Resources:
             - AttributeName: GSI1PK
               KeyType: HASH
             - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI2
+          KeySchema:
+            - AttributeName: GSI2PK
+              KeyType: HASH
+            - AttributeName: GSI2SK
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
@@ -94,7 +106,7 @@ Resources:
       CorsConfiguration:
         AllowOrigins: ['*']
         AllowHeaders: ['Content-Type', 'Authorization']
-        AllowMethods: ['GET', 'POST', 'OPTIONS']
+        AllowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS']
       Auth:
         Authorizers:
           CognitoAuthorizer:
@@ -152,6 +164,25 @@ Resources:
             ApiId: !Ref HttpApi
             Method: GET
             Path: /desocupacoes
+
+  DeleteDesocupacaoFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppName}-${Environment}-delete-desocupacao
+      CodeUri: .
+      Handler: handlers.delete_desocupacao.handler
+      Layers:
+        - !Ref DepsLayerArn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DesocupacoesTable
+      Events:
+        DeleteDesoc:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: DELETE
+            Path: /desocupacoes/{id}
 
   ExportXlsxFn:
     Type: AWS::Serverless::Function

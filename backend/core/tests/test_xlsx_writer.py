@@ -10,6 +10,7 @@ from domain.xlsx_writer import build_xlsx
 def _record(year=2025, month=7, day=3) -> Desocupacao:
     return Desocupacao(
         id="abc",
+        status="ACTIVE",
         cidade="Florianopolis",
         edificio="Top Vision Residence",
         numero_apto="1227",

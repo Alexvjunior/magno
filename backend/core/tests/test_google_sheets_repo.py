@@ -7,6 +7,7 @@ from infra.google_sheets_repo import desocupacao_to_sheet_row
 def _record() -> Desocupacao:
     return Desocupacao(
         id="uuid-123",
+        status="ACTIVE",
         cidade="Florianopolis",
         edificio="Top Vision Residence",
         numero_apto="1227",

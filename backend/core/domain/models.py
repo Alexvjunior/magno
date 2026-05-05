@@ -5,6 +5,7 @@ from datetime import date
 from typing import Literal
 
 Uso = Literal["Residencial", "Comercial"]
+RecordStatus = Literal["ACTIVE", "DELETED"]
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,7 @@ class DesocupacaoInput:
 @dataclass(frozen=True)
 class Desocupacao:
     id: str
+    status: RecordStatus
     cidade: str
     edificio: str
     numero_apto: str
@@ -54,6 +56,7 @@ class Desocupacao:
     def to_api_dict(self) -> dict:
         return {
             "id": self.id,
+            "status": self.status,
             "cidade": self.cidade,
             "edificio": self.edificio,
             "numeroApto": self.numero_apto,

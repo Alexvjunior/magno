@@ -24,6 +24,7 @@ def handler(event: dict, _context) -> dict:
     user_sub = get_user_sub(event)
     record = Desocupacao(
         id=str(uuid.uuid4()),
+        status="ACTIVE",
         cidade=validated.cidade,
         edificio=validated.edificio,
         numero_apto=validated.numero_apto,

@@ -32,6 +32,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
   const [items, setItems] = useState<Desocupacao[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
   const {
     register,
@@ -81,6 +82,30 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
       a.remove();
     } catch (e) {
       setServerError(e instanceof Error ? e.message : 'Falha ao exportar');
+    }
+  }
+
+  async function onRemove(item: Desocupacao) {
+    const confirmed = window.confirm(
+      `Remover a desocupacao de ${item.edificio} - apto ${item.numeroApto}?`,
+    );
+    if (!confirmed) return;
+
+    setServerError(null);
+    setSuccess(null);
+    setRemovingIds((current) => new Set(current).add(item.id));
+    try {
+      await apiService.removeDesocupacao(item.id, item.dataEvento);
+      setSuccess('Desocupacao removida.');
+      await refresh();
+    } catch (e) {
+      setServerError(e instanceof Error ? e.message : 'Falha ao remover');
+    } finally {
+      setRemovingIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
     }
   }
 
@@ -267,31 +292,45 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                 <th>Mes</th>
                 <th>Ano</th>
                 <th>Motivo</th>
+                <th>Acoes</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((d) => (
-                <tr key={d.id}>
-                  <td>{d.cidade}</td>
-                  <td>{d.edificio}</td>
-                  <td>{d.numeroApto}</td>
-                  <td>{d.areaPrivativa.toFixed(2)}</td>
-                  <td>{d.tipologia}</td>
-                  <td>{d.uso}</td>
-                  <td>{d.statusEvento}</td>
-                  <td>{d.dataEvento}</td>
-                  <td>{d.dataInicioContrato}</td>
-                  <td>{d.valorAluguel.toFixed(2)}</td>
-                  <td>{d.diasVacancia}</td>
-                  <td>{d.mes}</td>
-                  <td>{d.ano}</td>
-                  <td title={d.motivoDesocupacao}>
-                    {d.motivoDesocupacao.length > 50
-                      ? `${d.motivoDesocupacao.slice(0, 50)}...`
-                      : d.motivoDesocupacao}
-                  </td>
-                </tr>
-              ))}
+              {items.map((d) => {
+                const isRemoving = removingIds.has(d.id);
+                return (
+                  <tr key={d.id}>
+                    <td>{d.cidade}</td>
+                    <td>{d.edificio}</td>
+                    <td>{d.numeroApto}</td>
+                    <td>{d.areaPrivativa.toFixed(2)}</td>
+                    <td>{d.tipologia}</td>
+                    <td>{d.uso}</td>
+                    <td>{d.statusEvento}</td>
+                    <td>{d.dataEvento}</td>
+                    <td>{d.dataInicioContrato}</td>
+                    <td>{d.valorAluguel.toFixed(2)}</td>
+                    <td>{d.diasVacancia}</td>
+                    <td>{d.mes}</td>
+                    <td>{d.ano}</td>
+                    <td title={d.motivoDesocupacao}>
+                      {d.motivoDesocupacao.length > 50
+                        ? `${d.motivoDesocupacao.slice(0, 50)}...`
+                        : d.motivoDesocupacao}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-danger"
+                        onClick={() => onRemove(d)}
+                        disabled={isRemoving}
+                      >
+                        {isRemoving ? 'Removendo...' : 'Remover'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

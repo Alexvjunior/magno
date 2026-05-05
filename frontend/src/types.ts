@@ -1,4 +1,5 @@
 export type Uso = 'Residencial' | 'Comercial';
+export type RecordStatus = 'ACTIVE' | 'DELETED';
 
 export interface DesocupacaoInput {
   cidade: string;
@@ -19,6 +20,7 @@ export interface DesocupacaoInput {
 
 export interface Desocupacao extends DesocupacaoInput {
   id: string;
+  status: RecordStatus;
   criadoPor: string;
   criadoEm: string; // ISO timestamp
 }

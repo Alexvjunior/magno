@@ -7,6 +7,7 @@ export interface ApiService {
   createDesocupacao(input: DesocupacaoInput): Promise<Desocupacao>;
   listDesocupacoes(params?: { ano?: number; mes?: number }): Promise<Desocupacao[]>;
   exportXlsx(params?: { ano?: number; mes?: number }): Promise<{ url: string; filename: string }>;
+  removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }>;
 }
 
 class HttpApi implements ApiService {
@@ -51,6 +52,14 @@ class HttpApi implements ApiService {
     if (params.mes) qs.set('mes', String(params.mes));
     const suffix = qs.toString() ? `?${qs}` : '';
     return this.request<{ url: string; filename: string }>(`/desocupacoes/export${suffix}`);
+  }
+
+  removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }> {
+    const qs = new URLSearchParams({ dataEvento });
+    return this.request<{ id: string; status: 'DELETED' }>(
+      `/desocupacoes/${encodeURIComponent(id)}?${qs}`,
+      { method: 'DELETE' },
+    );
   }
 }
 

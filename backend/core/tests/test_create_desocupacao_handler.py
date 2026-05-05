@@ -52,9 +52,11 @@ def test_handler_saves_to_dynamo_then_appends_to_google_sheets(monkeypatch):
 
     assert response["statusCode"] == 201
     assert body["id"] == "uuid-123"
+    assert body["status"] == "ACTIVE"
     put.assert_called_once()
     append.assert_called_once()
     assert append.call_args.args[0].id == "uuid-123"
+    assert append.call_args.args[0].status == "ACTIVE"
 
 
 def test_handler_returns_502_when_google_sheets_append_fails_after_dynamo(monkeypatch):

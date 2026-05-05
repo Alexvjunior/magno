@@ -68,6 +68,7 @@ export const mockApi: ApiService = {
     if (!user) throw new Error('Não autenticado');
     const item: Desocupacao = {
       id: uuid(),
+      status: 'ACTIVE',
       ...input,
       criadoPor: user.sub,
       criadoEm: new Date().toISOString(),
@@ -79,7 +80,7 @@ export const mockApi: ApiService = {
   },
 
   async listDesocupacoes(params: { ano?: number; mes?: number } = {}): Promise<Desocupacao[]> {
-    const all = loadAll();
+    const all = loadAll().filter((d) => d.status !== 'DELETED');
     if (!params.ano && !params.mes) return all;
     return all.filter((d) => {
       if (params.ano && d.ano !== params.ano) return false;
@@ -96,5 +97,14 @@ export const mockApi: ApiService = {
     const stamp = new Date().toISOString().slice(0, 10);
     const filename = `desocupacoes-${stamp}.csv`;
     return { url, filename };
+  },
+
+  async removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }> {
+    const all = loadAll();
+    const index = all.findIndex((d) => d.id === id && d.dataEvento === dataEvento);
+    if (index === -1) throw new Error('Desocupacao nao encontrada');
+    all[index] = { ...all[index], status: 'DELETED' };
+    saveAll(all);
+    return { id, status: 'DELETED' };
   },
 };
