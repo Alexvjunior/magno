@@ -137,7 +137,7 @@ def test_google_sheets_append_desocupacao_appends_to_movimentacoes(monkeypatch):
     google_sheets_repo.append_desocupacao(_desocupacao())
 
     spreadsheets.values.return_value.append.assert_called_once()
-    assert spreadsheets.values.return_value.append.call_args.kwargs["range"] == "MOVIMENTACOES!A:O"
+    assert spreadsheets.values.return_value.append.call_args.kwargs["range"] == "MOVIMENTACOES!B:O"
 
 
 def test_google_sheets_sheet_id_raises_when_tab_is_missing(monkeypatch):

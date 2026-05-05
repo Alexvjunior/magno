@@ -52,7 +52,6 @@ def _imovel_record() -> Imovel:
 
 def test_desocupacao_to_sheet_row_matches_movimentacoes_order():
     assert desocupacao_to_sheet_row(_record()) == [
-        "FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
         "Florianopolis",
         "Top Vision Residence",
         "1227",

@@ -23,7 +23,6 @@ DEFAULT_IMOVES_SHEET_NAME = "IMOVEIS"
 
 def desocupacao_to_sheet_row(record: Desocupacao) -> list[Any]:
     return [
-        record.id_imovel,
         record.cidade,
         record.edificio,
         record.numero_apto,
@@ -99,7 +98,7 @@ def append_imovel(record: Imovel) -> dict[str, Any]:
 def append_desocupacao(record: Desocupacao) -> dict[str, Any]:
     spreadsheet_id = _spreadsheet_id()
     sheet_name = _sheet_name()
-    range_name = f"{sheet_name}!A:O"
+    range_name = f"{sheet_name}!B:O"
     row = desocupacao_to_sheet_row(record)
 
     LOGGER.info("Appending desocupacao %s to Google Sheets range %s", record.id, range_name)
