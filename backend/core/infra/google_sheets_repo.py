@@ -18,7 +18,7 @@ LOGGER = logging.getLogger(__name__)
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 DEFAULT_SPREADSHEET_ID = "1bNzVyloJJmWT9-erNjO-4sR0UNFL0Ct1r9TurN63ekA"
 DEFAULT_SHEET_NAME = "MOVIMENTACOES"
-DEFAULT_IMOVES_SHEET_NAME = "IMOVES"
+DEFAULT_IMOVES_SHEET_NAME = "IMOVEIS"
 
 
 def desocupacao_to_sheet_row(record: Desocupacao) -> list[Any]:

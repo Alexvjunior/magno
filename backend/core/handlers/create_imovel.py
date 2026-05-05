@@ -1,4 +1,4 @@
-"""POST /imoveis -- validates payload, persists to DynamoDB, then appends to IMOVES."""
+"""POST /imoveis -- validates payload, persists to DynamoDB, then appends to IMOVEIS."""
 from __future__ import annotations
 
 import logging

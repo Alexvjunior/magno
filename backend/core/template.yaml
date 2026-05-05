@@ -156,7 +156,7 @@ Resources:
         Variables:
           GOOGLE_SERVICE_ACCOUNT_SECRET_ARN: !Ref GoogleServiceAccountSecretArn
           GOOGLE_SHEETS_SPREADSHEET_ID: 1bNzVyloJJmWT9-erNjO-4sR0UNFL0Ct1r9TurN63ekA
-          GOOGLE_SHEETS_IMOVES_SHEET_NAME: IMOVES
+          GOOGLE_SHEETS_IMOVES_SHEET_NAME: IMOVEIS
       Layers:
         - !Ref DepsLayerArn
       Policies:

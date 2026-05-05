@@ -154,13 +154,13 @@ def test_imovel_exists_by_id_reads_imoves_column_a(monkeypatch):
     }
 
     monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
-    monkeypatch.setattr(google_sheets_repo, "_imoveis_sheet_name", lambda: "IMOVES")
+    monkeypatch.setattr(google_sheets_repo, "_imoveis_sheet_name", lambda: "IMOVEIS")
     monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
 
     assert google_sheets_repo.imovel_exists_by_id("FLORIANOPOLIS|PLAZA MEDITERRANEO|326") is True
     spreadsheets.values.return_value.get.assert_called_once_with(
         spreadsheetId="spreadsheet-1",
-        range="IMOVES!A:A",
+        range="IMOVEIS!A:A",
     )
 
 
@@ -170,14 +170,14 @@ def test_append_imovel_appends_to_imoves(monkeypatch):
     spreadsheets.values.return_value.append.return_value.execute.return_value = {"updates": {}}
 
     monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
-    monkeypatch.setattr(google_sheets_repo, "_imoveis_sheet_name", lambda: "IMOVES")
+    monkeypatch.setattr(google_sheets_repo, "_imoveis_sheet_name", lambda: "IMOVEIS")
     monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
 
     google_sheets_repo.append_imovel(_imovel_record())
 
     spreadsheets.values.return_value.append.assert_called_once_with(
         spreadsheetId="spreadsheet-1",
-        range="IMOVES!A:M",
+        range="IMOVEIS!A:M",
         valueInputOption="USER_ENTERED",
         insertDataOption="INSERT_ROWS",
         body={"values": [imovel_to_sheet_row(_imovel_record())]},
