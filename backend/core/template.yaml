@@ -25,6 +25,9 @@ Parameters:
   XlsxLayerArn:
     Type: String
     Description: ARN da xlsx-layer publicada
+  GoogleServiceAccountSecretArn:
+    Type: String
+    Description: ARN do secret com o JSON da Service Account do Google Sheets
 
 Globals:
   Function:
@@ -108,11 +111,21 @@ Resources:
       FunctionName: !Sub ${AppName}-${Environment}-create-desocupacao
       CodeUri: .
       Handler: handlers.create_desocupacao.handler
+      Environment:
+        Variables:
+          GOOGLE_SERVICE_ACCOUNT_SECRET_ARN: !Ref GoogleServiceAccountSecretArn
+          GOOGLE_SHEETS_SPREADSHEET_ID: 1bNzVyloJJmWT9-erNjO-4sR0UNFL0Ct1r9TurN63ekA
+          GOOGLE_SHEETS_SHEET_NAME: MOVIMENTACOES
       Layers:
         - !Ref DepsLayerArn
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref DesocupacoesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref GoogleServiceAccountSecretArn
       Events:
         CreateDesoc:
           Type: HttpApi

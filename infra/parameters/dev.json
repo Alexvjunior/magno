@@ -3,5 +3,6 @@
   "AppName": "claud",
   "AwsRegion": "us-east-1",
   "DepsLayerArn": "REPLACE_WITH_PUBLISHED_LAYER_ARN",
-  "XlsxLayerArn": "REPLACE_WITH_PUBLISHED_LAYER_ARN"
+  "XlsxLayerArn": "REPLACE_WITH_PUBLISHED_LAYER_ARN",
+  "GoogleServiceAccountSecretArn": "REPLACE_WITH_GOOGLE_SERVICE_ACCOUNT_SECRET_ARN"
 }

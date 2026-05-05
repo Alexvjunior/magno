@@ -1,14 +1,17 @@
 """POST /desocupacoes -- validates payload, persists to DynamoDB."""
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 
 from domain.models import Desocupacao
 from domain.validators import ValidationError, validate_desocupacao
-from infra import dynamo_repo
+from infra import dynamo_repo, google_sheets_repo
 
 from ._common import get_user_sub, json_response, parse_body
+
+LOGGER = logging.getLogger(__name__)
 
 
 def handler(event: dict, _context) -> dict:
@@ -39,5 +42,18 @@ def handler(event: dict, _context) -> dict:
         criado_em=datetime.now(timezone.utc).isoformat(),
     )
     dynamo_repo.put(record)
+    try:
+        google_sheets_repo.append_desocupacao(record)
+    except Exception as exc:
+        LOGGER.exception("Failed to append desocupacao %s to Google Sheets", record.id)
+        return json_response(
+            502,
+            {
+                "message": "Desocupacao salva no DynamoDB, mas falhou ao enviar para Google Sheets",
+                "dynamoSaved": True,
+                "id": record.id,
+                "error": str(exc),
+            },
+        )
 
     return json_response(201, record.to_api_dict())

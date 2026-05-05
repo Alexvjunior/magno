@@ -41,6 +41,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install pytest openpyxl boto3
+          pip install -r ../layers/deps-layer/requirements.txt
       - name: Run tests
         run: pytest
 

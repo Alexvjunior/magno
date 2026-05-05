@@ -1,3 +1,5 @@
 # Light deps shared across all handlers.
 # boto3 is provided by the Lambda runtime — keep this layer minimal.
 python-dateutil==2.9.0.post0
+google-api-python-client==2.195.0
+google-auth==2.50.0

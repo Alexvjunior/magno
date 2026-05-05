@@ -44,6 +44,12 @@ Os workflows aceitam variaveis do GitHub (`vars`) para sobrescrever os defaults:
 `STACK_AUTH_DEV`, `STACK_CORE_DEV`, `STACK_FRONTEND_DEV`, `STACK_AUTH_PROD`,
 `STACK_CORE_PROD` e `STACK_FRONTEND_PROD`.
 
+Os workflows tambem exigem `GOOGLE_SERVICE_ACCOUNT_SECRET_ARN`, como secret ou
+variable do GitHub Environment. Em dev, configure no environment `dev`; em prod,
+configure no environment `production`. O valor deve ser o ARN do secret no AWS
+Secrets Manager que contem o JSON da Service Account usada para escrever na
+planilha Google Sheets compartilhada.
+
 Os workflows `deploy-dev` e `deploy-prod` publicam:
 
 1. Cognito (`backend/auth/template.yaml`).

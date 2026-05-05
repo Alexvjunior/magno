@@ -79,7 +79,13 @@ jobs:
           echo "client_id=$CLIENT_ID" >> "$GITHUB_OUTPUT"
 
       - name: Deploy core stack
+        env:
+          GOOGLE_SERVICE_ACCOUNT_SECRET_ARN: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_SECRET_ARN || vars.GOOGLE_SERVICE_ACCOUNT_SECRET_ARN }}
         run: |
+          if [ -z "$GOOGLE_SERVICE_ACCOUNT_SECRET_ARN" ]; then
+            echo "Missing required GitHub secret or variable: GOOGLE_SERVICE_ACCOUNT_SECRET_ARN"
+            exit 1
+          fi
           cd backend/core
           sam build
           sam deploy --no-confirm-changeset --no-fail-on-empty-changeset \
@@ -94,7 +100,8 @@ jobs:
               UserPoolId=${{ steps.auth.outputs.user_pool_id }} \
               UserPoolClientId=${{ steps.auth.outputs.client_id }} \
               DepsLayerArn=${{ steps.layers.outputs.deps_arn }} \
-              XlsxLayerArn=${{ steps.layers.outputs.xlsx_arn }}
+              XlsxLayerArn=${{ steps.layers.outputs.xlsx_arn }} \
+              GoogleServiceAccountSecretArn=$GOOGLE_SERVICE_ACCOUNT_SECRET_ARN
 
       - name: Read core API URL
         id: core
