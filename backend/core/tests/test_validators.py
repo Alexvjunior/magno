@@ -11,7 +11,8 @@ def _good_payload(**overrides):
         "areaPrivativa": 68.78,
         "tipologia": "2 dormitorios",
         "uso": "Residencial",
-        "statusEvento": "Desocupado",
+        "idImovel": "FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
+        "statusEvento": "Desocupacao",
         "dataEvento": "2025-07-03",
         "dataInicioContrato": "2023-10-24",
         "valorAluguel": 2500.50,
@@ -45,11 +46,8 @@ def _good_imovel_payload(**overrides):
 
 def test_validates_good_payload():
     out = validate_desocupacao(_good_payload())
-    assert out.cidade == "Florianopolis"
-    assert out.edificio == "Top Vision Residence"
-    assert out.numero_apto == "1227"
-    assert out.area_privativa == 68.78
-    assert out.uso == "Residencial"
+    assert out.id_imovel == "FLORIANOPOLIS|TOP VISION RESIDENCE|1227"
+    assert out.status_evento == "Desocupacao"
     assert out.mes == 7
     assert out.ano == 2025
 
@@ -59,25 +57,24 @@ def test_rejects_missing_required_fields_with_new_names():
         validate_desocupacao({})
 
     errors = ei.value.errors
-    assert "cidade" in errors
-    assert "edificio" in errors
-    assert "numeroApto" in errors
+    assert "idImovel" in errors
+    assert "statusEvento" in errors
     assert "dataEvento" in errors
     assert "dataInicioContrato" in errors
     assert "empreendimento" not in errors
     assert "apartamento" not in errors
 
 
-def test_rejects_negative_area():
+def test_rejects_missing_id_imovel():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao(_good_payload(areaPrivativa=-1))
-    assert "areaPrivativa" in ei.value.errors
+        validate_desocupacao(_good_payload(idImovel=""))
+    assert "idImovel" in ei.value.errors
 
 
-def test_rejects_invalid_uso():
+def test_rejects_invalid_status_evento():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao(_good_payload(uso="Industrial"))
-    assert "uso" in ei.value.errors
+        validate_desocupacao(_good_payload(statusEvento="Vago"))
+    assert "statusEvento" in ei.value.errors
 
 
 def test_rejects_data_evento_before_data_inicio_contrato():

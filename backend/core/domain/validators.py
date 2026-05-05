@@ -15,6 +15,7 @@ ALLOWED_USOS = {"Residencial", "Comercial"}
 ALLOWED_TIPOLOGIAS_IMOVEL = {"1Q", "2Q", "3Q", "4Q", "Sala", "Studio"}
 ALLOWED_MOBILIADO = {"Sim", "Não"}
 ALLOWED_STATUS_ATUAL_IMOVEL = {"Vago", "Locado"}
+ALLOWED_STATUS_EVENTOS = {"Desocupacao", "Locacao"}
 
 
 class ValidationError(Exception):
@@ -78,25 +79,14 @@ def build_id_imovel(cidade: str, edificio: str, numero_apto: str) -> str:
 def validate_desocupacao(payload: dict[str, Any]) -> DesocupacaoInput:
     errors: dict[str, str] = {}
 
-    cidade = _str(payload.get("cidade"), "cidade", errors, 2, 80)
-    edificio = _str(payload.get("edificio"), "edificio", errors, 2, 120)
-    numero_apto = _str(payload.get("numeroApto"), "numeroApto", errors, 1, 20)
+    id_imovel = _str(payload.get("idImovel"), "idImovel", errors, 3, 220)
 
-    area = _number(payload.get("areaPrivativa"), "areaPrivativa", errors)
-    if area is not None and area <= 0:
-        errors["areaPrivativa"] = "Deve ser maior que zero"
-        area = None
-
-    tipologia = _str(payload.get("tipologia"), "tipologia", errors, 1, 60)
-
-    uso_raw = payload.get("uso")
-    if uso_raw not in ALLOWED_USOS:
-        errors["uso"] = f"Use um de: {', '.join(sorted(ALLOWED_USOS))}"
-        uso = None
+    status_evento_raw = payload.get("statusEvento")
+    if status_evento_raw not in ALLOWED_STATUS_EVENTOS:
+        errors["statusEvento"] = f"Use um de: {', '.join(sorted(ALLOWED_STATUS_EVENTOS))}"
+        status_evento = None
     else:
-        uso = uso_raw
-
-    status_evento = _str(payload.get("statusEvento"), "statusEvento", errors, 1, 40)
+        status_evento = status_evento_raw
     data_evento = _parse_date(payload.get("dataEvento"), "dataEvento", errors)
     data_inicio_contrato = _parse_date(
         payload.get("dataInicioContrato"),
@@ -133,12 +123,7 @@ def validate_desocupacao(payload: dict[str, Any]) -> DesocupacaoInput:
         raise ValidationError(errors)
 
     return DesocupacaoInput(
-        cidade=cidade,  # type: ignore[arg-type]
-        edificio=edificio,  # type: ignore[arg-type]
-        numero_apto=numero_apto,  # type: ignore[arg-type]
-        area_privativa=area,  # type: ignore[arg-type]
-        tipologia=tipologia,  # type: ignore[arg-type]
-        uso=uso,  # type: ignore[arg-type]
+        id_imovel=id_imovel,  # type: ignore[arg-type]
         status_evento=status_evento,  # type: ignore[arg-type]
         data_evento=data_evento,  # type: ignore[arg-type]
         data_inicio_contrato=data_inicio_contrato,  # type: ignore[arg-type]

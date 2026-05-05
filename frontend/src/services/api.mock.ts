@@ -77,10 +77,19 @@ export const mockApi: ApiService = {
   async createDesocupacao(input: DesocupacaoInput): Promise<Desocupacao> {
     const user = mockAuth.getCurrentUser();
     if (!user) throw new Error('Não autenticado');
+    const imovel = loadAllImoveis().find((item) => item.idImovel === input.idImovel);
+    if (!imovel) throw new Error('Imovel nao encontrado');
     const item: Desocupacao = {
       id: uuid(),
       status: 'ACTIVE',
       ...input,
+      idImovel: imovel.idImovel,
+      cidade: imovel.cidade,
+      edificio: imovel.edificio,
+      numeroApto: imovel.numeroApto,
+      areaPrivativa: imovel.areaPrivativa,
+      tipologia: imovel.tipologia,
+      uso: imovel.uso,
       criadoPor: user.sub,
       criadoEm: new Date().toISOString(),
     };

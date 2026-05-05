@@ -21,16 +21,27 @@ def handler(event: dict, _context) -> dict:
     except ValidationError as e:
         return json_response(422, {"errors": e.errors})
 
+    imovel = dynamo_repo.get_imovel(validated.id_imovel)
+    if imovel is None:
+        return json_response(
+            404,
+            {
+                "message": "Imovel nao encontrado",
+                "idImovel": validated.id_imovel,
+            },
+        )
+
     user_sub = get_user_sub(event)
     record = Desocupacao(
         id=str(uuid.uuid4()),
         status="ACTIVE",
-        cidade=validated.cidade,
-        edificio=validated.edificio,
-        numero_apto=validated.numero_apto,
-        area_privativa=validated.area_privativa,
-        tipologia=validated.tipologia,
-        uso=validated.uso,
+        id_imovel=imovel.id_imovel,
+        cidade=imovel.cidade,
+        edificio=imovel.edificio,
+        numero_apto=imovel.numero_apto,
+        area_privativa=imovel.area_privativa,
+        tipologia=imovel.tipologia,
+        uso=imovel.uso,
         status_evento=validated.status_evento,
         data_evento=validated.data_evento,
         data_inicio_contrato=validated.data_inicio_contrato,

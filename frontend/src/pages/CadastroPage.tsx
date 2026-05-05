@@ -4,17 +4,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import AppHeader from '../components/AppHeader';
 import { env } from '../config/env';
 import { apiService } from '../services/api';
-import { desocupacaoSchema, type DesocupacaoForm } from '../services/schemas';
-import type { Desocupacao } from '../types';
+import { desocupacaoSchema, statusEventoValues, type DesocupacaoForm } from '../services/schemas';
+import type { Desocupacao, DesocupacaoInput, Imovel } from '../types';
 
 const emptyValues: DesocupacaoForm = {
+  idImovel: '',
   cidade: '',
   edificio: '',
   numeroApto: '',
   areaPrivativa: undefined as unknown as number,
   tipologia: '',
   uso: 'Residencial',
-  statusEvento: '',
+  statusEvento: '' as DesocupacaoForm['statusEvento'],
   dataEvento: '',
   dataInicioContrato: '',
   valorAluguel: undefined as unknown as number,
@@ -24,12 +25,27 @@ const emptyValues: DesocupacaoForm = {
   ano: undefined as unknown as number,
 };
 
+function valuesFromImovel(imovel: Imovel): DesocupacaoForm {
+  return {
+    ...emptyValues,
+    idImovel: imovel.idImovel,
+    cidade: imovel.cidade,
+    edificio: imovel.edificio,
+    numeroApto: imovel.numeroApto,
+    areaPrivativa: imovel.areaPrivativa,
+    tipologia: imovel.tipologia,
+    uso: imovel.uso,
+    valorAluguel: imovel.valorAluguelAtual,
+  };
+}
+
 type CadastroContentProps = {
   embedded?: boolean;
 };
 
 export function CadastroContent({ embedded = false }: CadastroContentProps) {
   const [items, setItems] = useState<Desocupacao[]>([]);
+  const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
@@ -38,13 +54,17 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<DesocupacaoForm>({
     resolver: zodResolver(desocupacaoSchema),
     defaultValues: emptyValues,
   });
 
-  async function refresh() {
+  const selectedIdImovel = watch('idImovel');
+  const selectedImovel = imoveis.find((item) => item.idImovel === selectedIdImovel);
+
+  async function refreshDesocupacoes() {
     try {
       const list = await apiService.listDesocupacoes();
       setItems(list.slice(0, 20));
@@ -53,18 +73,51 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     }
   }
 
+  async function refreshImoveis() {
+    try {
+      const list = await apiService.listImoveis();
+      setImoveis(list);
+    } catch (e) {
+      setServerError(e instanceof Error ? e.message : 'Falha ao carregar lista de imoveis');
+    }
+  }
+
   useEffect(() => {
-    refresh();
+    refreshDesocupacoes();
+    refreshImoveis();
   }, []);
 
-  async function onSubmit(values: DesocupacaoForm) {
+  function onSelectImovel(idImovel: string) {
     setServerError(null);
     setSuccess(null);
+    const imovel = imoveis.find((item) => item.idImovel === idImovel);
+    reset(imovel ? valuesFromImovel(imovel) : emptyValues);
+  }
+
+  async function onSubmit(values: DesocupacaoForm) {
+    if (!selectedImovel) {
+      setServerError('Selecione um imovel cadastrado.');
+      return;
+    }
+
+    setServerError(null);
+    setSuccess(null);
+    const input: DesocupacaoInput = {
+      ...values,
+      idImovel: selectedImovel.idImovel,
+      cidade: selectedImovel.cidade,
+      edificio: selectedImovel.edificio,
+      numeroApto: selectedImovel.numeroApto,
+      areaPrivativa: selectedImovel.areaPrivativa,
+      tipologia: selectedImovel.tipologia,
+      uso: selectedImovel.uso,
+    };
+
     try {
-      await apiService.createDesocupacao(values);
+      await apiService.createDesocupacao(input);
       setSuccess('Desocupacao cadastrada.');
       reset(emptyValues);
-      refresh();
+      refreshDesocupacoes();
     } catch (e) {
       setServerError(e instanceof Error ? e.message : 'Falha ao cadastrar');
     }
@@ -97,7 +150,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     try {
       await apiService.removeDesocupacao(item.id, item.dataEvento);
       setSuccess('Desocupacao removida.');
-      await refresh();
+      await refreshDesocupacoes();
     } catch (e) {
       setServerError(e instanceof Error ? e.message : 'Falha ao remover');
     } finally {
@@ -113,28 +166,51 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     <div className={embedded ? 'cadastro-content cadastro-content-embedded' : 'container'}>
       <div className="card">
         <h1>Nova desocupacao</h1>
-        <p className="muted">Preencha os dados. Campos com * sao obrigatorios.</p>
+        <p className="muted">Selecione um imovel cadastrado e preencha os dados do evento.</p>
 
         {serverError && <div className="alert alert-error">{serverError}</div>}
         {success && <div className="alert alert-success">{success}</div>}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <input type="hidden" {...register('idImovel')} />
+
+          <div className="field">
+            <label htmlFor="idImovelSelect">Imovel cadastrado *</label>
+            <select
+              id="idImovelSelect"
+              value={selectedIdImovel}
+              onChange={(event) => onSelectImovel(event.target.value)}
+              disabled={isSubmitting || imoveis.length === 0}
+            >
+              <option value="">Selecione um imovel</option>
+              {imoveis.map((imovel) => (
+                <option key={imovel.idImovel} value={imovel.idImovel}>
+                  {imovel.cidade} - {imovel.edificio} - apto {imovel.numeroApto}
+                </option>
+              ))}
+            </select>
+            {errors.idImovel && <span className="field-error">{errors.idImovel.message}</span>}
+            {imoveis.length === 0 && (
+              <span className="muted">Cadastre um imovel antes de registrar desocupacoes.</span>
+            )}
+          </div>
+
           <div className="row">
             <div className="field">
               <label htmlFor="cidade">Cidade *</label>
-              <input id="cidade" {...register('cidade')} />
+              <input id="cidade" readOnly aria-readonly="true" {...register('cidade')} />
               {errors.cidade && <span className="field-error">{errors.cidade.message}</span>}
             </div>
 
             <div className="field">
               <label htmlFor="edificio">Edificio *</label>
-              <input id="edificio" {...register('edificio')} />
+              <input id="edificio" readOnly aria-readonly="true" {...register('edificio')} />
               {errors.edificio && <span className="field-error">{errors.edificio.message}</span>}
             </div>
 
             <div className="field">
               <label htmlFor="numeroApto">Numero do Apto *</label>
-              <input id="numeroApto" {...register('numeroApto')} />
+              <input id="numeroApto" readOnly aria-readonly="true" {...register('numeroApto')} />
               {errors.numeroApto && (
                 <span className="field-error">{errors.numeroApto.message}</span>
               )}
@@ -146,6 +222,8 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                 id="areaPrivativa"
                 type="number"
                 step="0.01"
+                readOnly
+                aria-readonly="true"
                 {...register('areaPrivativa', { valueAsNumber: true })}
               />
               {errors.areaPrivativa && (
@@ -155,7 +233,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
 
             <div className="field">
               <label htmlFor="tipologia">Tipologia *</label>
-              <input id="tipologia" {...register('tipologia')} />
+              <input id="tipologia" readOnly aria-readonly="true" {...register('tipologia')} />
               {errors.tipologia && (
                 <span className="field-error">{errors.tipologia.message}</span>
               )}
@@ -163,16 +241,20 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
 
             <div className="field">
               <label htmlFor="uso">Uso *</label>
-              <select id="uso" {...register('uso')}>
-                <option value="Residencial">Residencial</option>
-                <option value="Comercial">Comercial</option>
-              </select>
+              <input id="uso" readOnly aria-readonly="true" {...register('uso')} />
               {errors.uso && <span className="field-error">{errors.uso.message}</span>}
             </div>
 
             <div className="field">
               <label htmlFor="statusEvento">Status do Evento *</label>
-              <input id="statusEvento" {...register('statusEvento')} />
+              <select id="statusEvento" disabled={!selectedImovel || isSubmitting} {...register('statusEvento')}>
+                <option value="">Selecione</option>
+                {statusEventoValues.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
               {errors.statusEvento && (
                 <span className="field-error">{errors.statusEvento.message}</span>
               )}
@@ -180,7 +262,12 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
 
             <div className="field">
               <label htmlFor="dataEvento">Data do Evento *</label>
-              <input id="dataEvento" type="date" {...register('dataEvento')} />
+              <input
+                id="dataEvento"
+                type="date"
+                disabled={!selectedImovel || isSubmitting}
+                {...register('dataEvento')}
+              />
               {errors.dataEvento && (
                 <span className="field-error">{errors.dataEvento.message}</span>
               )}
@@ -188,7 +275,12 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
 
             <div className="field">
               <label htmlFor="dataInicioContrato">Data de Inicio do Contrato *</label>
-              <input id="dataInicioContrato" type="date" {...register('dataInicioContrato')} />
+              <input
+                id="dataInicioContrato"
+                type="date"
+                disabled={!selectedImovel || isSubmitting}
+                {...register('dataInicioContrato')}
+              />
               {errors.dataInicioContrato && (
                 <span className="field-error">{errors.dataInicioContrato.message}</span>
               )}
@@ -201,6 +293,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                 type="number"
                 step="0.01"
                 min={0}
+                disabled={!selectedImovel || isSubmitting}
                 {...register('valorAluguel', { valueAsNumber: true })}
               />
               {errors.valorAluguel && (
@@ -215,6 +308,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                 type="number"
                 step="1"
                 min={0}
+                disabled={!selectedImovel || isSubmitting}
                 {...register('diasVacancia', { valueAsNumber: true })}
               />
               {errors.diasVacancia && (
@@ -230,6 +324,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                 step="1"
                 min={1}
                 max={12}
+                disabled={!selectedImovel || isSubmitting}
                 {...register('mes', { valueAsNumber: true })}
               />
               {errors.mes && <span className="field-error">{errors.mes.message}</span>}
@@ -242,6 +337,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                 type="number"
                 step="1"
                 min={2000}
+                disabled={!selectedImovel || isSubmitting}
                 {...register('ano', { valueAsNumber: true })}
               />
               {errors.ano && <span className="field-error">{errors.ano.message}</span>}
@@ -250,14 +346,19 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
 
           <div className="field">
             <label htmlFor="motivoDesocupacao">Motivo da Desocupacao *</label>
-            <textarea id="motivoDesocupacao" rows={3} {...register('motivoDesocupacao')} />
+            <textarea
+              id="motivoDesocupacao"
+              rows={3}
+              disabled={!selectedImovel || isSubmitting}
+              {...register('motivoDesocupacao')}
+            />
             {errors.motivoDesocupacao && (
               <span className="field-error">{errors.motivoDesocupacao.message}</span>
             )}
           </div>
 
           <div className="actions">
-            <button type="submit" className="btn-primary" disabled={isSubmitting}>
+            <button type="submit" className="btn-primary" disabled={isSubmitting || !selectedImovel}>
               {isSubmitting ? 'Salvando...' : 'Salvar'}
             </button>
             <button type="button" className="btn-secondary" onClick={onExport}>

@@ -92,6 +92,15 @@ h1 {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+.field input[readonly],
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
 .field textarea {
   resize: vertical;
   min-height: 80px;

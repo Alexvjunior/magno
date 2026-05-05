@@ -58,6 +58,7 @@ def test_from_item_maps_legacy_fields_to_current_contract():
     assert out.ano == 2025
     assert out.cidade == "Nao informado"
     assert out.status == "ACTIVE"
+    assert out.id_imovel == "Nao informado"
     assert out.status_evento == "Legado"
     assert out.valor_aluguel == 0.0
     assert out.to_api_dict()["edificio"] == "Top Vision Residence"
@@ -68,13 +69,14 @@ def test_to_item_uses_current_contract_and_month_index():
         Desocupacao(
             id="abc",
             status="ACTIVE",
+            id_imovel="FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
             cidade="Florianopolis",
             edificio="Top Vision Residence",
             numero_apto="1227",
             area_privativa=68.78,
             tipologia="2 dormitorios",
             uso="Residencial",
-            status_evento="Desocupado",
+            status_evento="Desocupacao",
             data_evento=date(2025, 7, 3),
             data_inicio_contrato=date(2023, 10, 24),
             valor_aluguel=2500.50,
@@ -92,6 +94,7 @@ def test_to_item_uses_current_contract_and_month_index():
     assert item["GSI2PK"] == "STATUS#ACTIVE"
     assert item["GSI2SK"] == "2025-07-03#abc"
     assert item["status"] == "ACTIVE"
+    assert item["idImovel"] == "FLORIANOPOLIS|TOP VISION RESIDENCE|1227"
     assert item["edificio"] == "Top Vision Residence"
     assert "empreendimento" not in item
 
@@ -194,6 +197,51 @@ def test_imovel_exists_by_id_returns_false_when_missing(monkeypatch):
     monkeypatch.setattr(dynamo_repo, "_table", table)
 
     assert dynamo_repo.imovel_exists_by_id("FLORIANOPOLIS|PLAZA MEDITERRANEO|326") is False
+
+
+def test_get_desocupacao_returns_record_by_key(monkeypatch):
+    table = Mock()
+    record = dynamo_repo._from_item(
+        dynamo_repo._to_item(
+            Desocupacao(
+                id="abc",
+                status="ACTIVE",
+                id_imovel="FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
+                cidade="Florianopolis",
+                edificio="Top Vision Residence",
+                numero_apto="1227",
+                area_privativa=68.78,
+                tipologia="2Q",
+                uso="Residencial",
+                status_evento="Desocupacao",
+                data_evento=date(2025, 7, 3),
+                data_inicio_contrato=date(2023, 10, 24),
+                valor_aluguel=2500.5,
+                dias_vacancia=12,
+                motivo_desocupacao="Mudou de estado",
+                mes=7,
+                ano=2025,
+                criado_por="user-1",
+                criado_em="2025-07-03T12:00:00Z",
+            )
+        )
+    )
+    table.get_item.return_value = {"Item": dynamo_repo._to_item(record)}
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    assert dynamo_repo.get("abc", date(2025, 7, 3)).id_imovel == "FLORIANOPOLIS|TOP VISION RESIDENCE|1227"
+    table.get_item.assert_called_once_with(
+        Key={"PK": "TENANT#default", "SK": "DESOC#2025-07-03#abc"},
+        ConsistentRead=True,
+    )
+
+
+def test_get_imovel_returns_none_when_missing(monkeypatch):
+    table = Mock()
+    table.get_item.return_value = {}
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    assert dynamo_repo.get_imovel("missing") is None
 
 
 def test_list_imoveis_queries_prefix_pages_and_sorts_by_criado_em(monkeypatch):

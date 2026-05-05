@@ -4,6 +4,7 @@ export const usoSchema = z.enum(['Residencial', 'Comercial']);
 export const tipologiaImovelValues = ['1Q', '2Q', '3Q', '4Q', 'Sala', 'Studio'] as const;
 export const mobiliadoValues = ['Sim', 'Não'] as const;
 export const statusAtualImovelValues = ['Vago', 'Locado'] as const;
+export const statusEventoValues = ['Desocupacao', 'Locacao'] as const;
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const currentYear = new Date().getFullYear();
@@ -31,6 +32,7 @@ export function buildIdImovel(cidade: string, edificio: string, numeroApto: stri
 
 export const desocupacaoSchema = z
   .object({
+    idImovel: z.string().trim().min(3, 'Selecione um imovel').max(220, 'Maximo 220 caracteres'),
     cidade: z
       .string()
       .trim()
@@ -91,12 +93,18 @@ export const desocupacaoSchema = z
       .min(2000, 'Ano inválido')
       .max(currentYear + 1, 'Ano inválido'),
   })
+  .refine((d) => statusEventoValues.includes(d.statusEvento as (typeof statusEventoValues)[number]), {
+    message: 'Selecione Desocupacao ou Locacao',
+    path: ['statusEvento'],
+  })
   .refine((d) => d.dataEvento >= d.dataInicioContrato, {
     message: 'Data do evento deve ser ≥ data de início do contrato',
     path: ['dataEvento'],
   });
 
-export type DesocupacaoForm = z.infer<typeof desocupacaoSchema>;
+export type DesocupacaoForm = Omit<z.infer<typeof desocupacaoSchema>, 'statusEvento'> & {
+  statusEvento: (typeof statusEventoValues)[number];
+};
 
 export const imovelSchema = z.object({
   cidade: z

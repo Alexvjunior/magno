@@ -3,6 +3,9 @@ node_modules/
 dist/
 build/
 .vite/
+coverage/
+playwright-report/
+test-results/
 
 # Env
 .env
@@ -17,6 +20,9 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
 
 # SAM
 .aws-sam/
@@ -30,3 +36,5 @@ Thumbs.db
 
 # Logs
 *.log
+
+backend/.coverage

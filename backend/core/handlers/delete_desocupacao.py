@@ -23,12 +23,19 @@ def handler(event: dict, _context) -> dict:
     except ValueError:
         return json_response(400, {"errors": {"dataEvento": "dataEvento invalida"}})
 
+    record = dynamo_repo.get(record_id, data_evento)
+    if record is None:
+        return json_response(404, {"message": "Desocupacao nao encontrada"})
+
     deleted = dynamo_repo.mark_deleted(record_id, data_evento)
     if not deleted:
         return json_response(404, {"message": "Desocupacao nao encontrada"})
 
     try:
-        sheets_deleted = google_sheets_repo.delete_desocupacao_by_id(record_id)
+        sheets_deleted = google_sheets_repo.delete_desocupacao_by_imovel_and_date(
+            record.id_imovel,
+            record.data_evento,
+        )
     except Exception as exc:
         LOGGER.exception("Failed to delete desocupacao %s from Google Sheets", record_id)
         return json_response(

@@ -1,10 +1,36 @@
 import json
 import os
+from datetime import date
 
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 os.environ.setdefault("AWS_EC2_METADATA_DISABLED", "true")
 
+from domain.models import Desocupacao  # noqa: E402
 from handlers import delete_desocupacao  # noqa: E402
+
+
+def _record() -> Desocupacao:
+    return Desocupacao(
+        id="uuid-123",
+        status="ACTIVE",
+        id_imovel="FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
+        cidade="Florianopolis",
+        edificio="Top Vision Residence",
+        numero_apto="1227",
+        area_privativa=68.78,
+        tipologia="2Q",
+        uso="Residencial",
+        status_evento="Desocupacao",
+        data_evento=date(2025, 7, 3),
+        data_inicio_contrato=date(2023, 10, 24),
+        valor_aluguel=2500.5,
+        dias_vacancia=12,
+        motivo_desocupacao="Mudou de estado",
+        mes=7,
+        ano=2025,
+        criado_por="user-1",
+        criado_em="2025-07-03T12:00:00Z",
+    )
 
 
 def _event(record_id: str = "uuid-123", data_evento: str = "2025-07-03") -> dict:
@@ -21,11 +47,12 @@ def test_handler_marks_record_as_deleted(monkeypatch):
         calls.append((record_id, data_evento.isoformat()))
         return True
 
+    monkeypatch.setattr(delete_desocupacao.dynamo_repo, "get", lambda *_: _record())
     monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", mark_deleted)
     monkeypatch.setattr(
         delete_desocupacao.google_sheets_repo,
-        "delete_desocupacao_by_id",
-        lambda record_id: True,
+        "delete_desocupacao_by_imovel_and_date",
+        lambda id_imovel, data_evento: id_imovel == "FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
     )
 
     response = delete_desocupacao.handler(_event(), None)
@@ -37,8 +64,13 @@ def test_handler_marks_record_as_deleted(monkeypatch):
 
 
 def test_handler_returns_400_for_invalid_date(monkeypatch):
+    monkeypatch.setattr(delete_desocupacao.dynamo_repo, "get", lambda *_: _record())
     monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", lambda *_: True)
-    monkeypatch.setattr(delete_desocupacao.google_sheets_repo, "delete_desocupacao_by_id", lambda *_: True)
+    monkeypatch.setattr(
+        delete_desocupacao.google_sheets_repo,
+        "delete_desocupacao_by_imovel_and_date",
+        lambda *_: True,
+    )
 
     response = delete_desocupacao.handler(_event(data_evento="03/07/2025"), None)
 
@@ -46,8 +78,13 @@ def test_handler_returns_400_for_invalid_date(monkeypatch):
 
 
 def test_handler_returns_404_when_record_does_not_exist(monkeypatch):
+    monkeypatch.setattr(delete_desocupacao.dynamo_repo, "get", lambda *_: None)
     monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", lambda *_: False)
-    monkeypatch.setattr(delete_desocupacao.google_sheets_repo, "delete_desocupacao_by_id", lambda *_: True)
+    monkeypatch.setattr(
+        delete_desocupacao.google_sheets_repo,
+        "delete_desocupacao_by_imovel_and_date",
+        lambda *_: True,
+    )
 
     response = delete_desocupacao.handler(_event(), None)
 
@@ -55,10 +92,11 @@ def test_handler_returns_404_when_record_does_not_exist(monkeypatch):
 
 
 def test_handler_returns_502_when_google_sheets_delete_fails_after_dynamo(monkeypatch):
+    monkeypatch.setattr(delete_desocupacao.dynamo_repo, "get", lambda *_: _record())
     monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", lambda *_: True)
     monkeypatch.setattr(
         delete_desocupacao.google_sheets_repo,
-        "delete_desocupacao_by_id",
+        "delete_desocupacao_by_imovel_and_date",
         lambda *_: (_ for _ in ()).throw(RuntimeError("sheets unavailable")),
     )
 

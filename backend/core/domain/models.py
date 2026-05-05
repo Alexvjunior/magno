@@ -9,17 +9,13 @@ RecordStatus = Literal["ACTIVE", "DELETED"]
 TipologiaImovel = Literal["1Q", "2Q", "3Q", "4Q", "Sala", "Studio"]
 Mobiliado = Literal["Sim", "Não"]
 StatusAtualImovel = Literal["Vago", "Locado"]
+StatusEvento = Literal["Desocupacao", "Locacao"]
 
 
 @dataclass(frozen=True)
 class DesocupacaoInput:
-    cidade: str
-    edificio: str
-    numero_apto: str
-    area_privativa: float
-    tipologia: str
-    uso: Uso
-    status_evento: str
+    id_imovel: str
+    status_evento: StatusEvento
     data_evento: date
     data_inicio_contrato: date
     valor_aluguel: float
@@ -33,6 +29,7 @@ class DesocupacaoInput:
 class Desocupacao:
     id: str
     status: RecordStatus
+    id_imovel: str
     cidade: str
     edificio: str
     numero_apto: str
@@ -60,6 +57,7 @@ class Desocupacao:
         return {
             "id": self.id,
             "status": self.status,
+            "idImovel": self.id_imovel,
             "cidade": self.cidade,
             "edificio": self.edificio,
             "numeroApto": self.numero_apto,

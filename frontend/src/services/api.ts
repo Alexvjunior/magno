@@ -12,7 +12,7 @@ export interface ApiService {
   removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }>;
 }
 
-class HttpApi implements ApiService {
+export class HttpApi implements ApiService {
   private baseUrl: string;
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl.replace(/\/$/, '');

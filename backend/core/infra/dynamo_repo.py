@@ -52,6 +52,7 @@ def _to_item(d: Desocupacao) -> dict:
         "GSI2SK": gsi2sk,
         "id": d.id,
         "status": d.status,
+        "idImovel": d.id_imovel,
         "cidade": d.cidade,
         "edificio": d.edificio,
         "numeroApto": d.numero_apto,
@@ -168,6 +169,7 @@ def _from_item(item: dict) -> Desocupacao:
     return Desocupacao(
         id=_text(item.get("id"), "sem-id"),
         status=_record_status(item.get("status")),
+        id_imovel=_text(item.get("idImovel")),
         cidade=_text(item.get("cidade")),
         edificio=_text(item.get("edificio", item.get("empreendimento"))),
         numero_apto=_text(item.get("numeroApto", item.get("apartamento"))),
@@ -211,6 +213,15 @@ def put(d: Desocupacao) -> None:
     _table.put_item(Item=_to_item(d))
 
 
+def get(record_id: str, data_evento: date) -> Desocupacao | None:
+    resp = _table.get_item(
+        Key=_item_key(record_id, data_evento),
+        ConsistentRead=True,
+    )
+    item = resp.get("Item")
+    return _from_item(item) if item else None
+
+
 def imovel_exists_by_id(id_imovel: str) -> bool:
     resp = _table.get_item(
         Key=_imovel_key(id_imovel),
@@ -218,6 +229,15 @@ def imovel_exists_by_id(id_imovel: str) -> bool:
         ProjectionExpression="PK",
     )
     return "Item" in resp
+
+
+def get_imovel(id_imovel: str) -> Imovel | None:
+    resp = _table.get_item(
+        Key=_imovel_key(id_imovel),
+        ConsistentRead=True,
+    )
+    item = resp.get("Item")
+    return _from_imovel_item(item) if item else None
 
 
 def put_imovel(imovel: Imovel) -> None:

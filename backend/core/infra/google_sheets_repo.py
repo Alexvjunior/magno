@@ -23,7 +23,7 @@ DEFAULT_IMOVES_SHEET_NAME = "IMOVEIS"
 
 def desocupacao_to_sheet_row(record: Desocupacao) -> list[Any]:
     return [
-        record.id,
+        record.id_imovel,
         record.cidade,
         record.edificio,
         record.numero_apto,
@@ -118,16 +118,16 @@ def append_desocupacao(record: Desocupacao) -> dict[str, Any]:
     )
 
 
-def delete_desocupacao_by_id(record_id: str) -> bool:
+def delete_desocupacao_by_imovel_and_date(id_imovel: str, data_evento) -> bool:
     spreadsheet_id = _spreadsheet_id()
     sheet_name = _sheet_name()
-    row_number = _find_row_number_by_id(spreadsheet_id, sheet_name, record_id)
+    row_number = _find_row_number_by_imovel_and_date(spreadsheet_id, sheet_name, id_imovel, data_evento)
     if row_number is None:
-        LOGGER.info("Desocupacao %s not found in Google Sheets", record_id)
+        LOGGER.info("Desocupacao %s %s not found in Google Sheets", id_imovel, data_evento)
         return False
 
     sheet_id = _sheet_id(spreadsheet_id, sheet_name)
-    LOGGER.info("Deleting desocupacao %s from Google Sheets row %s", record_id, row_number)
+    LOGGER.info("Deleting desocupacao %s from Google Sheets row %s", id_imovel, row_number)
     _sheets_service().spreadsheets().batchUpdate(
         spreadsheetId=spreadsheet_id,
         body={
@@ -146,6 +146,58 @@ def delete_desocupacao_by_id(record_id: str) -> bool:
         },
     ).execute()
     return True
+
+
+def delete_desocupacao_by_id(record_id: str) -> bool:
+    row_number = _find_row_number_by_id(_spreadsheet_id(), _sheet_name(), record_id)
+    if row_number is None:
+        LOGGER.info("Desocupacao %s not found in Google Sheets", record_id)
+        return False
+    sheet_id = _sheet_id(_spreadsheet_id(), _sheet_name())
+    _sheets_service().spreadsheets().batchUpdate(
+        spreadsheetId=_spreadsheet_id(),
+        body={
+            "requests": [
+                {
+                    "deleteDimension": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "dimension": "ROWS",
+                            "startIndex": row_number - 1,
+                            "endIndex": row_number,
+                        }
+                    }
+                }
+            ]
+        },
+    ).execute()
+    return True
+
+
+def _find_row_number_by_imovel_and_date(
+    spreadsheet_id: str,
+    sheet_name: str,
+    id_imovel: str,
+    data_evento,
+) -> int | None:
+    values = (
+        _sheets_service()
+        .spreadsheets()
+        .values()
+        .get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!A:I")
+        .execute()
+        .get("values", [])
+    )
+    target_id = id_imovel.strip()
+    target_date = data_evento.strftime("%d/%m/%Y")
+    for index, row in enumerate(values, start=1):
+        if index == 1:
+            continue
+        row_id = str(row[0]).strip() if len(row) >= 1 else ""
+        row_date = str(row[8]).strip() if len(row) >= 9 else ""
+        if row_id == target_id and row_date == target_date:
+            return index
+    return None
 
 
 def _find_row_number_by_id(spreadsheet_id: str, sheet_name: str, record_id: str) -> int | None:

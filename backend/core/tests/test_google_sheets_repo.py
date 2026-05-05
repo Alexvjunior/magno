@@ -10,13 +10,14 @@ def _record() -> Desocupacao:
     return Desocupacao(
         id="uuid-123",
         status="ACTIVE",
+        id_imovel="FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
         cidade="Florianopolis",
         edificio="Top Vision Residence",
         numero_apto="1227",
         area_privativa=68.78,
         tipologia="2 dormitorios",
         uso="Residencial",
-        status_evento="Desocupado",
+        status_evento="Desocupacao",
         data_evento=date(2025, 7, 3),
         data_inicio_contrato=date(2023, 10, 24),
         valor_aluguel=2500.50,
@@ -51,14 +52,14 @@ def _imovel_record() -> Imovel:
 
 def test_desocupacao_to_sheet_row_matches_movimentacoes_order():
     assert desocupacao_to_sheet_row(_record()) == [
-        "uuid-123",
+        "FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
         "Florianopolis",
         "Top Vision Residence",
         "1227",
         68.78,
         "2 dormitorios",
         "Residencial",
-        "Desocupado",
+        "Desocupacao",
         "03/07/2025",
         "24/10/2023",
         2500.50,
@@ -69,14 +70,14 @@ def test_desocupacao_to_sheet_row_matches_movimentacoes_order():
     ]
 
 
-def test_delete_desocupacao_by_id_deletes_matching_sheet_row(monkeypatch):
+def test_delete_desocupacao_by_imovel_and_date_deletes_matching_sheet_row(monkeypatch):
     service = Mock()
     spreadsheets = service.spreadsheets.return_value
     spreadsheets.values.return_value.get.return_value.execute.return_value = {
         "values": [
-            ["ID_Imovel"],
-            ["other-id"],
-            ["uuid-123"],
+            ["ID_Imovel", "", "", "", "", "", "", "", "Data Evento"],
+            ["other-id", "", "", "", "", "", "", "", "03/07/2025"],
+            ["FLORIANOPOLIS|TOP VISION RESIDENCE|1227", "", "", "", "", "", "", "", "03/07/2025"],
         ]
     }
     spreadsheets.get.return_value.execute.return_value = {
@@ -88,7 +89,13 @@ def test_delete_desocupacao_by_id_deletes_matching_sheet_row(monkeypatch):
     monkeypatch.setattr(google_sheets_repo, "_sheet_name", lambda: "MOVIMENTACOES")
     monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
 
-    assert google_sheets_repo.delete_desocupacao_by_id("uuid-123") is True
+    assert (
+        google_sheets_repo.delete_desocupacao_by_imovel_and_date(
+            "FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
+            date(2025, 7, 3),
+        )
+        is True
+    )
 
     spreadsheets.batchUpdate.assert_called_once_with(
         spreadsheetId="spreadsheet-1",
@@ -109,18 +116,24 @@ def test_delete_desocupacao_by_id_deletes_matching_sheet_row(monkeypatch):
     )
 
 
-def test_delete_desocupacao_by_id_returns_false_when_row_is_missing(monkeypatch):
+def test_delete_desocupacao_by_imovel_and_date_returns_false_when_row_is_missing(monkeypatch):
     service = Mock()
     spreadsheets = service.spreadsheets.return_value
     spreadsheets.values.return_value.get.return_value.execute.return_value = {
-        "values": [["ID_Imovel"], ["other-id"]]
+        "values": [["ID_Imovel", "", "", "", "", "", "", "", "Data Evento"], ["other-id"]]
     }
 
     monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
     monkeypatch.setattr(google_sheets_repo, "_sheet_name", lambda: "MOVIMENTACOES")
     monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
 
-    assert google_sheets_repo.delete_desocupacao_by_id("uuid-123") is False
+    assert (
+        google_sheets_repo.delete_desocupacao_by_imovel_and_date(
+            "FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
+            date(2025, 7, 3),
+        )
+        is False
+    )
     spreadsheets.batchUpdate.assert_not_called()
 
 

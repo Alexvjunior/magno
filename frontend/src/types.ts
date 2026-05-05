@@ -3,15 +3,17 @@ export type RecordStatus = 'ACTIVE' | 'DELETED';
 export type TipologiaImovel = '1Q' | '2Q' | '3Q' | '4Q' | 'Sala' | 'Studio';
 export type Mobiliado = 'Sim' | 'Não';
 export type StatusAtualImovel = 'Vago' | 'Locado';
+export type StatusEvento = 'Desocupacao' | 'Locacao';
 
 export interface DesocupacaoInput {
+  idImovel: string;
   cidade: string;
   edificio: string;
   numeroApto: string;
   areaPrivativa: number;
   tipologia: string;
   uso: Uso;
-  statusEvento: string;
+  statusEvento: StatusEvento;
   dataEvento: string;          // ISO yyyy-mm-dd
   dataInicioContrato: string;  // ISO yyyy-mm-dd
   valorAluguel: number;
