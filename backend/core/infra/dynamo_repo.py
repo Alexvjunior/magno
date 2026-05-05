@@ -19,7 +19,7 @@ import boto3
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
 
-from domain.models import Desocupacao, RecordStatus
+from domain.models import Desocupacao, Imovel, RecordStatus
 
 TABLE_NAME = os.environ.get("DDB_TABLE", "claud-desocupacoes")
 TENANT_ID = "default"
@@ -29,6 +29,10 @@ DELETED_STATUS: RecordStatus = "DELETED"
 
 _dynamodb = boto3.resource("dynamodb")
 _table = _dynamodb.Table(TABLE_NAME)
+
+
+class DuplicateImovelError(Exception):
+    pass
 
 
 def _to_decimal(value: float | int) -> Decimal:
@@ -64,6 +68,29 @@ def _to_item(d: Desocupacao) -> dict:
         "ano": d.ano,
         "criadoPor": d.criado_por,
         "criadoEm": d.criado_em,
+    }
+
+
+def _to_imovel_item(imovel: Imovel) -> dict:
+    return {
+        "PK": f"TENANT#{TENANT_ID}",
+        "SK": f"IMOVEL#{imovel.id_imovel}",
+        "entityType": "IMOVEL",
+        "idImovel": imovel.id_imovel,
+        "cidade": imovel.cidade,
+        "edificio": imovel.edificio,
+        "numeroApto": imovel.numero_apto,
+        "areaPrivativa": _to_decimal(imovel.area_privativa),
+        "tipologia": imovel.tipologia,
+        "uso": imovel.uso,
+        "mobiliado": imovel.mobiliado,
+        "statusAtual": imovel.status_atual,
+        "valorAluguelAtual": _to_decimal(imovel.valor_aluguel_atual),
+        "dataUltimaLocacao": imovel.data_ultima_locacao.isoformat(),
+        "dataUltimaDesocupacao": imovel.data_ultima_desocupacao.isoformat(),
+        "diasVacanciaAtual": imovel.dias_vacancia_atual,
+        "criadoPor": imovel.criado_por,
+        "criadoEm": imovel.criado_em,
     }
 
 
@@ -155,6 +182,18 @@ def _from_item(item: dict) -> Desocupacao:
 
 def put(d: Desocupacao) -> None:
     _table.put_item(Item=_to_item(d))
+
+
+def put_imovel(imovel: Imovel) -> None:
+    try:
+        _table.put_item(
+            Item=_to_imovel_item(imovel),
+            ConditionExpression="attribute_not_exists(PK) AND attribute_not_exists(SK)",
+        )
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+            raise DuplicateImovelError from exc
+        raise
 
 
 def list_by_month(year: int, month: int) -> list[Desocupacao]:

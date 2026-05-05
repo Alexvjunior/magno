@@ -1,5 +1,8 @@
 export type Uso = 'Residencial' | 'Comercial';
 export type RecordStatus = 'ACTIVE' | 'DELETED';
+export type TipologiaImovel = '1Q' | '2Q' | '3Q' | '4Q' | 'Sala' | 'Studio';
+export type Mobiliado = 'Sim' | 'Não';
+export type StatusAtualImovel = 'Vago' | 'Locado';
 
 export interface DesocupacaoInput {
   cidade: string;
@@ -21,6 +24,27 @@ export interface DesocupacaoInput {
 export interface Desocupacao extends DesocupacaoInput {
   id: string;
   status: RecordStatus;
+  criadoPor: string;
+  criadoEm: string; // ISO timestamp
+}
+
+export interface ImovelInput {
+  cidade: string;
+  edificio: string;
+  numeroApto: string;
+  areaPrivativa: number;
+  tipologia: TipologiaImovel;
+  uso: Uso;
+  mobiliado: Mobiliado;
+  statusAtual: StatusAtualImovel;
+  valorAluguelAtual: number;
+  dataUltimaLocacao: string;       // ISO yyyy-mm-dd
+  dataUltimaDesocupacao: string;   // ISO yyyy-mm-dd
+  diasVacanciaAtual: number;
+}
+
+export interface Imovel extends ImovelInput {
+  idImovel: string;
   criadoPor: string;
   criadoEm: string; // ISO timestamp
 }

@@ -1,0 +1,86 @@
+"""POST /imoveis -- validates payload, persists to DynamoDB, then appends to IMOVES."""
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+
+from domain.models import Imovel
+from domain.validators import ValidationError, validate_imovel
+from infra import dynamo_repo, google_sheets_repo
+
+from ._common import get_user_sub, json_response, parse_body
+
+LOGGER = logging.getLogger(__name__)
+
+
+def handler(event: dict, _context) -> dict:
+    payload = parse_body(event)
+    try:
+        validated = validate_imovel(payload)
+    except ValidationError as e:
+        return json_response(422, {"errors": e.errors})
+
+    try:
+        if google_sheets_repo.imovel_exists_by_id(validated.id_imovel):
+            return json_response(
+                409,
+                {
+                    "message": "Este imovel ja foi cadastrado.",
+                    "idImovel": validated.id_imovel,
+                },
+            )
+    except Exception as exc:
+        LOGGER.exception("Failed to check imovel %s in Google Sheets", validated.id_imovel)
+        return json_response(
+            502,
+            {
+                "message": "Falha ao verificar imovel no Google Sheets",
+                "idImovel": validated.id_imovel,
+                "error": str(exc),
+            },
+        )
+
+    record = Imovel(
+        id_imovel=validated.id_imovel,
+        cidade=validated.cidade,
+        edificio=validated.edificio,
+        numero_apto=validated.numero_apto,
+        area_privativa=validated.area_privativa,
+        tipologia=validated.tipologia,
+        uso=validated.uso,
+        mobiliado=validated.mobiliado,
+        status_atual=validated.status_atual,
+        valor_aluguel_atual=validated.valor_aluguel_atual,
+        data_ultima_locacao=validated.data_ultima_locacao,
+        data_ultima_desocupacao=validated.data_ultima_desocupacao,
+        dias_vacancia_atual=validated.dias_vacancia_atual,
+        criado_por=get_user_sub(event),
+        criado_em=datetime.now(timezone.utc).isoformat(),
+    )
+
+    try:
+        dynamo_repo.put_imovel(record)
+    except dynamo_repo.DuplicateImovelError:
+        return json_response(
+            409,
+            {
+                "message": "Este imovel ja foi cadastrado.",
+                "idImovel": record.id_imovel,
+            },
+        )
+
+    try:
+        google_sheets_repo.append_imovel(record)
+    except Exception as exc:
+        LOGGER.exception("Failed to append imovel %s to Google Sheets", record.id_imovel)
+        return json_response(
+            502,
+            {
+                "message": "Imovel salvo no DynamoDB, mas falhou ao enviar para Google Sheets",
+                "dynamoSaved": True,
+                "idImovel": record.id_imovel,
+                "error": str(exc),
+            },
+        )
+
+    return json_response(201, record.to_api_dict())

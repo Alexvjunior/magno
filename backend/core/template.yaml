@@ -146,6 +146,35 @@ Resources:
             Method: POST
             Path: /desocupacoes
 
+  CreateImovelFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppName}-${Environment}-create-imovel
+      CodeUri: .
+      Handler: handlers.create_imovel.handler
+      Environment:
+        Variables:
+          GOOGLE_SERVICE_ACCOUNT_SECRET_ARN: !Ref GoogleServiceAccountSecretArn
+          GOOGLE_SHEETS_SPREADSHEET_ID: 1bNzVyloJJmWT9-erNjO-4sR0UNFL0Ct1r9TurN63ekA
+          GOOGLE_SHEETS_IMOVES_SHEET_NAME: IMOVES
+      Layers:
+        - !Ref DepsLayerArn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DesocupacoesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource: !Ref GoogleServiceAccountSecretArn
+      Events:
+        CreateImovel:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: POST
+            Path: /imoveis
+
   ListDesocupacoesFn:
     Type: AWS::Serverless::Function
     Properties:

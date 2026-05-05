@@ -1,8 +1,10 @@
-import type { Desocupacao, DesocupacaoInput } from '../types';
+import type { Desocupacao, DesocupacaoInput, Imovel, ImovelInput } from '../types';
+import { buildIdImovel, normalizeImovelText } from './schemas';
 import { mockAuth } from './auth.mock';
 import type { ApiService } from './api';
 
 const STORAGE_KEY = 'claud.mock.desocupacoes';
+const IMOVEIS_STORAGE_KEY = 'claud.mock.imoveis';
 
 function loadAll(): Desocupacao[] {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -11,6 +13,15 @@ function loadAll(): Desocupacao[] {
 
 function saveAll(items: Desocupacao[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function loadAllImoveis(): Imovel[] {
+  const raw = localStorage.getItem(IMOVEIS_STORAGE_KEY);
+  return raw ? (JSON.parse(raw) as Imovel[]) : [];
+}
+
+function saveAllImoveis(items: Imovel[]) {
+  localStorage.setItem(IMOVEIS_STORAGE_KEY, JSON.stringify(items));
 }
 
 function uuid(): string {
@@ -76,6 +87,37 @@ export const mockApi: ApiService = {
     const all = loadAll();
     all.unshift(item);
     saveAll(all);
+    return item;
+  },
+
+  async createImovel(input: ImovelInput): Promise<Imovel> {
+    const user = mockAuth.getCurrentUser();
+    if (!user) throw new Error('Nao autenticado');
+
+    const normalizedInput: ImovelInput = {
+      ...input,
+      cidade: normalizeImovelText(input.cidade),
+      edificio: normalizeImovelText(input.edificio),
+      numeroApto: input.numeroApto.trim(),
+    };
+    const idImovel = buildIdImovel(
+      normalizedInput.cidade,
+      normalizedInput.edificio,
+      normalizedInput.numeroApto,
+    );
+    const all = loadAllImoveis();
+    if (all.some((item) => item.idImovel === idImovel)) {
+      throw new Error('Este imovel ja foi cadastrado.');
+    }
+
+    const item: Imovel = {
+      idImovel,
+      ...normalizedInput,
+      criadoPor: user.sub,
+      criadoEm: new Date().toISOString(),
+    };
+    all.unshift(item);
+    saveAllImoveis(all);
     return item;
   },
 

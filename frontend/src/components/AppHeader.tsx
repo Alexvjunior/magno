@@ -6,13 +6,14 @@ import { authService } from '../services/auth';
 type AppHeaderProps = {
   title: string;
   onOpenCadastro?: () => void;
+  onOpenCadastroImoveis?: () => void;
 };
 
-export default function AppHeader({ title, onOpenCadastro }: AppHeaderProps) {
+export default function AppHeader({ title, onOpenCadastro, onOpenCadastroImoveis }: AppHeaderProps) {
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
   const [isCadastroMenuOpen, setIsCadastroMenuOpen] = useState(false);
-  const showCadastroMenu = Boolean(onOpenCadastro);
+  const showCadastroMenu = Boolean(onOpenCadastro || onOpenCadastroImoveis);
 
   async function onLogout() {
     await authService.logout();
@@ -22,6 +23,11 @@ export default function AppHeader({ title, onOpenCadastro }: AppHeaderProps) {
   function openCadastro() {
     setIsCadastroMenuOpen(false);
     onOpenCadastro?.();
+  }
+
+  function openCadastroImoveis() {
+    setIsCadastroMenuOpen(false);
+    onOpenCadastroImoveis?.();
   }
 
   return (
@@ -43,9 +49,16 @@ export default function AppHeader({ title, onOpenCadastro }: AppHeaderProps) {
             </button>
             {isCadastroMenuOpen && (
               <div className="dropdown-menu" role="menu">
-                <button type="button" role="menuitem" onClick={openCadastro}>
-                  Desocupacoes
-                </button>
+                {onOpenCadastro && (
+                  <button type="button" role="menuitem" onClick={openCadastro}>
+                    Desocupacoes
+                  </button>
+                )}
+                {onOpenCadastroImoveis && (
+                  <button type="button" role="menuitem" onClick={openCadastroImoveis}>
+                    Imoveis
+                  </button>
+                )}
               </div>
             )}
           </div>

@@ -1,9 +1,9 @@
 from datetime import date
 from unittest.mock import Mock
 
-from domain.models import Desocupacao
+from domain.models import Desocupacao, Imovel
 from infra import google_sheets_repo
-from infra.google_sheets_repo import desocupacao_to_sheet_row
+from infra.google_sheets_repo import desocupacao_to_sheet_row, imovel_to_sheet_row
 
 
 def _record() -> Desocupacao:
@@ -26,6 +26,26 @@ def _record() -> Desocupacao:
         ano=2025,
         criado_por="user-1",
         criado_em="2025-07-03T12:00:00Z",
+    )
+
+
+def _imovel_record() -> Imovel:
+    return Imovel(
+        id_imovel="FLORIANOPOLIS|PLAZA MEDITERRANEO|326",
+        cidade="Florianopolis",
+        edificio="Plaza Mediterraneo",
+        numero_apto="326",
+        area_privativa=72.5,
+        tipologia="2Q",
+        uso="Residencial",
+        mobiliado="Não",
+        status_atual="Vago",
+        valor_aluguel_atual=4300.0,
+        data_ultima_locacao=date(2025, 2, 10),
+        data_ultima_desocupacao=date(2025, 5, 1),
+        dias_vacancia_atual=12,
+        criado_por="user-1",
+        criado_em="2025-05-01T12:00:00Z",
     )
 
 
@@ -102,3 +122,63 @@ def test_delete_desocupacao_by_id_returns_false_when_row_is_missing(monkeypatch)
 
     assert google_sheets_repo.delete_desocupacao_by_id("uuid-123") is False
     spreadsheets.batchUpdate.assert_not_called()
+
+
+def test_imovel_to_sheet_row_matches_imoves_order():
+    assert imovel_to_sheet_row(_imovel_record()) == [
+        "FLORIANOPOLIS|PLAZA MEDITERRANEO|326",
+        "Florianopolis",
+        "Plaza Mediterraneo",
+        "326",
+        72.5,
+        "2Q",
+        "Residencial",
+        "Não",
+        "Vago",
+        4300.0,
+        "10/02/2025",
+        "01/05/2025",
+        12,
+    ]
+
+
+def test_imovel_exists_by_id_reads_imoves_column_a(monkeypatch):
+    service = Mock()
+    spreadsheets = service.spreadsheets.return_value
+    spreadsheets.values.return_value.get.return_value.execute.return_value = {
+        "values": [
+            ["ID_Imovel"],
+            ["OTHER|BUILDING|101"],
+            ["FLORIANOPOLIS|PLAZA MEDITERRANEO|326"],
+        ]
+    }
+
+    monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
+    monkeypatch.setattr(google_sheets_repo, "_imoveis_sheet_name", lambda: "IMOVES")
+    monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
+
+    assert google_sheets_repo.imovel_exists_by_id("FLORIANOPOLIS|PLAZA MEDITERRANEO|326") is True
+    spreadsheets.values.return_value.get.assert_called_once_with(
+        spreadsheetId="spreadsheet-1",
+        range="IMOVES!A:A",
+    )
+
+
+def test_append_imovel_appends_to_imoves(monkeypatch):
+    service = Mock()
+    spreadsheets = service.spreadsheets.return_value
+    spreadsheets.values.return_value.append.return_value.execute.return_value = {"updates": {}}
+
+    monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
+    monkeypatch.setattr(google_sheets_repo, "_imoveis_sheet_name", lambda: "IMOVES")
+    monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
+
+    google_sheets_repo.append_imovel(_imovel_record())
+
+    spreadsheets.values.return_value.append.assert_called_once_with(
+        spreadsheetId="spreadsheet-1",
+        range="IMOVES!A:M",
+        valueInputOption="USER_ENTERED",
+        insertDataOption="INSERT_ROWS",
+        body={"values": [imovel_to_sheet_row(_imovel_record())]},
+    )

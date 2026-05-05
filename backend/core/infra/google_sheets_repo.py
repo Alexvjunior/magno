@@ -11,13 +11,14 @@ import boto3
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-from domain.models import Desocupacao
+from domain.models import Desocupacao, Imovel
 
 LOGGER = logging.getLogger(__name__)
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 DEFAULT_SPREADSHEET_ID = "1bNzVyloJJmWT9-erNjO-4sR0UNFL0Ct1r9TurN63ekA"
 DEFAULT_SHEET_NAME = "MOVIMENTACOES"
+DEFAULT_IMOVES_SHEET_NAME = "IMOVES"
 
 
 def desocupacao_to_sheet_row(record: Desocupacao) -> list[Any]:
@@ -38,6 +39,61 @@ def desocupacao_to_sheet_row(record: Desocupacao) -> list[Any]:
         record.mes,
         record.ano,
     ]
+
+
+def imovel_to_sheet_row(record: Imovel) -> list[Any]:
+    return [
+        record.id_imovel,
+        record.cidade,
+        record.edificio,
+        record.numero_apto,
+        record.area_privativa,
+        record.tipologia,
+        record.uso,
+        record.mobiliado,
+        record.status_atual,
+        record.valor_aluguel_atual,
+        record.data_ultima_locacao.strftime("%d/%m/%Y"),
+        record.data_ultima_desocupacao.strftime("%d/%m/%Y"),
+        record.dias_vacancia_atual,
+    ]
+
+
+def imovel_exists_by_id(id_imovel: str) -> bool:
+    spreadsheet_id = _spreadsheet_id()
+    sheet_name = _imoveis_sheet_name()
+    values = (
+        _sheets_service()
+        .spreadsheets()
+        .values()
+        .get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!A:A")
+        .execute()
+        .get("values", [])
+    )
+    target = id_imovel.strip()
+    return any(row and str(row[0]).strip() == target for row in values)
+
+
+def append_imovel(record: Imovel) -> dict[str, Any]:
+    spreadsheet_id = _spreadsheet_id()
+    sheet_name = _imoveis_sheet_name()
+    range_name = f"{sheet_name}!A:M"
+    row = imovel_to_sheet_row(record)
+
+    LOGGER.info("Appending imovel %s to Google Sheets range %s", record.id_imovel, range_name)
+    return (
+        _sheets_service()
+        .spreadsheets()
+        .values()
+        .append(
+            spreadsheetId=spreadsheet_id,
+            range=range_name,
+            valueInputOption="USER_ENTERED",
+            insertDataOption="INSERT_ROWS",
+            body={"values": [row]},
+        )
+        .execute()
+    )
 
 
 def append_desocupacao(record: Desocupacao) -> dict[str, Any]:
@@ -122,6 +178,10 @@ def _spreadsheet_id() -> str:
 
 def _sheet_name() -> str:
     return os.environ.get("GOOGLE_SHEETS_SHEET_NAME", DEFAULT_SHEET_NAME).strip()
+
+
+def _imoveis_sheet_name() -> str:
+    return os.environ.get("GOOGLE_SHEETS_IMOVES_SHEET_NAME", DEFAULT_IMOVES_SHEET_NAME).strip()
 
 
 @lru_cache(maxsize=1)

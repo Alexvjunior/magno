@@ -1,9 +1,33 @@
 import { z } from 'zod';
 
 export const usoSchema = z.enum(['Residencial', 'Comercial']);
+export const tipologiaImovelValues = ['1Q', '2Q', '3Q', '4Q', 'Sala', 'Studio'] as const;
+export const mobiliadoValues = ['Sim', 'Não'] as const;
+export const statusAtualImovelValues = ['Vago', 'Locado'] as const;
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const currentYear = new Date().getFullYear();
+
+export function removeAccents(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+export function normalizeImovelText(value: string): string {
+  const text = removeAccents(value).trim().replace(/\s+/g, ' ');
+  if (!text) return '';
+  return text
+    .split(' ')
+    .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function buildIdImovel(cidade: string, edificio: string, numeroApto: string): string {
+  const normalizedCidade = normalizeImovelText(cidade);
+  const normalizedEdificio = normalizeImovelText(edificio);
+  const apto = numeroApto.trim();
+  if (!normalizedCidade || !normalizedEdificio || !/^\d+$/.test(apto)) return '';
+  return `${normalizedCidade.toUpperCase()}|${normalizedEdificio.toUpperCase()}|${apto}`;
+}
 
 export const desocupacaoSchema = z
   .object({
@@ -73,6 +97,50 @@ export const desocupacaoSchema = z
   });
 
 export type DesocupacaoForm = z.infer<typeof desocupacaoSchema>;
+
+export const imovelSchema = z.object({
+  cidade: z
+    .string()
+    .trim()
+    .min(2, 'Minimo 2 caracteres')
+    .max(80, 'Maximo 80 caracteres'),
+  edificio: z
+    .string()
+    .trim()
+    .min(2, 'Minimo 2 caracteres')
+    .max(120, 'Maximo 120 caracteres'),
+  numeroApto: z
+    .string()
+    .trim()
+    .min(1, 'Obrigatorio')
+    .max(20, 'Maximo 20 caracteres')
+    .regex(/^\d+$/, 'Use apenas numeros'),
+  areaPrivativa: z
+    .number({ invalid_type_error: 'Informe um numero' })
+    .positive('Deve ser maior que zero'),
+  tipologia: z.enum(tipologiaImovelValues),
+  uso: usoSchema,
+  mobiliado: z.enum(mobiliadoValues),
+  statusAtual: z.enum(statusAtualImovelValues),
+  valorAluguelAtual: z
+    .number({ invalid_type_error: 'Informe um numero' })
+    .nonnegative('Nao pode ser negativo'),
+  dataUltimaLocacao: z
+    .string()
+    .min(1, 'Obrigatorio')
+    .regex(dateRegex, 'Data invalida'),
+  dataUltimaDesocupacao: z
+    .string()
+    .min(1, 'Obrigatorio')
+    .regex(dateRegex, 'Data invalida'),
+  diasVacanciaAtual: z
+    .number({ invalid_type_error: 'Informe um numero' })
+    .int('Use numero inteiro')
+    .min(0, 'Nao pode ser negativo')
+    .max(999, 'Maximo 3 digitos'),
+});
+
+export type ImovelForm = z.infer<typeof imovelSchema>;
 
 export const loginSchema = z.object({
   email: z.string().email('E-mail inválido'),

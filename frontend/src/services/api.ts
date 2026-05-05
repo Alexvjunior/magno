@@ -1,10 +1,11 @@
 import { env } from '../config/env';
-import type { Desocupacao, DesocupacaoInput } from '../types';
+import type { Desocupacao, DesocupacaoInput, Imovel, ImovelInput } from '../types';
 import { mockApi } from './api.mock';
 import { authService } from './auth';
 
 export interface ApiService {
   createDesocupacao(input: DesocupacaoInput): Promise<Desocupacao>;
+  createImovel(input: ImovelInput): Promise<Imovel>;
   listDesocupacoes(params?: { ano?: number; mes?: number }): Promise<Desocupacao[]>;
   exportXlsx(params?: { ano?: number; mes?: number }): Promise<{ url: string; filename: string }>;
   removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }>;
@@ -26,13 +27,31 @@ class HttpApi implements ApiService {
     const res = await fetch(this.baseUrl + path, { ...init, headers });
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`HTTP ${res.status}: ${body}`);
+      let message = body ? `HTTP ${res.status}: ${body}` : `HTTP ${res.status}`;
+      try {
+        const parsed = JSON.parse(body) as { message?: string; errors?: Record<string, string> };
+        if (parsed.message) {
+          message = parsed.message;
+        } else if (parsed.errors) {
+          message = Object.values(parsed.errors).join('; ');
+        }
+      } catch {
+        // Keep the raw HTTP message when the response is not JSON.
+      }
+      throw new Error(message);
     }
     return (await res.json()) as T;
   }
 
   createDesocupacao(input: DesocupacaoInput): Promise<Desocupacao> {
     return this.request<Desocupacao>('/desocupacoes', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  }
+
+  createImovel(input: ImovelInput): Promise<Imovel> {
+    return this.request<Imovel>('/imoveis', {
       method: 'POST',
       body: JSON.stringify(input),
     });
