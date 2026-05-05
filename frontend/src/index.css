@@ -298,10 +298,11 @@ header.app-header .user {
 }
 
 .dashboard-shell {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg);
+  overflow: hidden;
 }
 
 .dashboard-main {
@@ -314,7 +315,7 @@ header.app-header .user {
 
 .dashboard-frame-panel {
   flex: 1;
-  min-height: 620px;
+  min-height: 0;
   background: white;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -325,7 +326,7 @@ header.app-header .user {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 620px;
+  min-height: 0;
   border: 0;
   background: white;
 }
@@ -406,7 +407,7 @@ header.app-header .user {
 
   .dashboard-frame-panel,
   .dashboard-frame {
-    min-height: 560px;
+    min-height: 0;
   }
 
   .modal-backdrop {
