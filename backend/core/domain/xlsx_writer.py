@@ -1,4 +1,4 @@
-"""Generates a multi-sheet XLSX from Desocupacao records.
+"""Generates a multi-sheet XLSX from movimentacao records.
 
 One sheet is created per (ano, mes), matching the current frontend form fields.
 """
@@ -12,7 +12,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
-from .models import Desocupacao
+from .models import Movimentacao
 
 MONTHS_PT = [
     "JANEIRO",
@@ -52,14 +52,14 @@ def _sheet_name(d: date) -> str:
 
 
 def _title(d: date) -> str:
-    return f"DESOCUPACOES - {MONTHS_PT[d.month - 1]} {str(d.year)[-2:]}"
+    return f"MOVIMENTACOES - {MONTHS_PT[d.month - 1]} {str(d.year)[-2:]}"
 
 
-def build_xlsx(items: list[Desocupacao]) -> bytes:
+def build_xlsx(items: list[Movimentacao]) -> bytes:
     wb = Workbook()
     wb.remove(wb.active)
 
-    by_month: dict[tuple[int, int], list[Desocupacao]] = defaultdict(list)
+    by_month: dict[tuple[int, int], list[Movimentacao]] = defaultdict(list)
     for it in items:
         by_month[(it.ano, it.mes)].append(it)
 
@@ -98,8 +98,9 @@ def build_xlsx(items: list[Desocupacao]) -> bytes:
             ws.cell(row=r_offset, column=8, value=item.status_evento)
             c_evento = ws.cell(row=r_offset, column=9, value=item.data_evento)
             c_evento.number_format = "DD/MM/YYYY"
-            c_inicio = ws.cell(row=r_offset, column=10, value=item.data_inicio_contrato)
-            c_inicio.number_format = "DD/MM/YYYY"
+            if item.data_inicio_contrato:
+                c_inicio = ws.cell(row=r_offset, column=10, value=item.data_inicio_contrato)
+                c_inicio.number_format = "DD/MM/YYYY"
             ws.cell(row=r_offset, column=11, value=item.valor_aluguel).number_format = "0.00"
             ws.cell(row=r_offset, column=12, value=item.dias_vacancia)
             ws.cell(row=r_offset, column=13, value=item.mes)

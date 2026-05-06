@@ -27,13 +27,13 @@ describe('HttpApi', () => {
 
   it('sends bearer token, trims base url and serializes create body', async () => {
     await mockAuth.login('user@example.com', 'password1');
-    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'desoc-1' }), { status: 201 }));
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ id: 'mov-1' }), { status: 201 }));
 
     const api = new HttpApi('https://api.example.com/');
-    await expect(api.createDesocupacao(input)).resolves.toEqual({ id: 'desoc-1' });
+    await expect(api.createMovimentacao(input)).resolves.toEqual({ id: 'mov-1' });
 
     expect(fetch).toHaveBeenCalledWith(
-      'https://api.example.com/desocupacoes',
+      'https://api.example.com/movimentacoes',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify(input),
@@ -52,14 +52,14 @@ describe('HttpApi', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ url: 'u', filename: 'f' }), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'a/b', status: 'DELETED' }), { status: 200 }));
 
-    await api.listDesocupacoes({ ano: 2025, mes: 7 });
+    await api.listMovimentacoes({ ano: 2025, mes: 7 });
     await api.exportXlsx({ ano: 2025, mes: 7 });
-    await api.removeDesocupacao('a/b', '2025-07-03');
+    await api.removeMovimentacao('a/b', '2025-07-03');
 
     expect(vi.mocked(fetch).mock.calls.map((call) => call[0])).toEqual([
-      'https://api.example.com/desocupacoes?ano=2025&mes=7',
-      'https://api.example.com/desocupacoes/export?ano=2025&mes=7',
-      'https://api.example.com/desocupacoes/a%2Fb?dataEvento=2025-07-03',
+      'https://api.example.com/movimentacoes?ano=2025&mes=7',
+      'https://api.example.com/movimentacoes/export?ano=2025&mes=7',
+      'https://api.example.com/movimentacoes/a%2Fb?dataEvento=2025-07-03',
     ]);
   });
 

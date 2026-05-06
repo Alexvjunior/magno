@@ -1,8 +1,8 @@
-"""DynamoDB repository for the single-table `desocupacoes` schema.
+"""DynamoDB repository for the single-table registros schema.
 
 Schema:
 - PK: TENANT#<tenant_id>          (single-tenant for now: "default")
-- SK: DESOC#<dataEvento>#<id>
+- SK: MOV#<dataEvento>#<id>
 - GSI1PK: ANO_MES#<yyyy-mm>
 - GSI1SK: <dataEvento ISO>
 - GSI2PK: STATUS#<ACTIVE|DELETED>
@@ -19,9 +19,9 @@ import boto3
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
 
-from domain.models import Desocupacao, Imovel, RecordStatus
+from domain.models import Imovel, Movimentacao, RecordStatus
 
-TABLE_NAME = os.environ.get("DDB_TABLE", "claud-desocupacoes")
+TABLE_NAME = os.environ.get("DDB_TABLE", "claud-registros")
 TENANT_ID = "default"
 DEFAULT_TEXT = "Nao informado"
 ACTIVE_STATUS: RecordStatus = "ACTIVE"
@@ -39,13 +39,14 @@ def _to_decimal(value: float | int) -> Decimal:
     return Decimal(str(value))
 
 
-def _to_item(d: Desocupacao) -> dict:
+def _to_item(d: Movimentacao) -> dict:
     yyyy_mm = f"{d.ano:04d}-{d.mes:02d}"
     data_evento = d.data_evento.isoformat()
     gsi2sk = _status_sort_key(data_evento, d.id)
-    return {
+    item = {
         "PK": f"TENANT#{TENANT_ID}",
-        "SK": f"DESOC#{data_evento}#{d.id}",
+        "SK": f"MOV#{data_evento}#{d.id}",
+        "entityType": "MOVIMENTACAO",
         "GSI1PK": f"ANO_MES#{yyyy_mm}",
         "GSI1SK": data_evento,
         "GSI2PK": _status_partition_key(d.status),
@@ -61,15 +62,20 @@ def _to_item(d: Desocupacao) -> dict:
         "uso": d.uso,
         "statusEvento": d.status_evento,
         "dataEvento": data_evento,
-        "dataInicioContrato": d.data_inicio_contrato.isoformat(),
-        "valorAluguel": _to_decimal(d.valor_aluguel),
-        "diasVacancia": d.dias_vacancia,
-        "motivoDesocupacao": d.motivo_desocupacao,
         "mes": d.mes,
         "ano": d.ano,
         "criadoPor": d.criado_por,
         "criadoEm": d.criado_em,
     }
+    if d.data_inicio_contrato:
+        item["dataInicioContrato"] = d.data_inicio_contrato.isoformat()
+    if d.valor_aluguel is not None:
+        item["valorAluguel"] = _to_decimal(d.valor_aluguel)
+    if d.dias_vacancia is not None:
+        item["diasVacancia"] = d.dias_vacancia
+    if d.motivo_desocupacao:
+        item["motivoDesocupacao"] = d.motivo_desocupacao
+    return item
 
 
 def _to_imovel_item(imovel: Imovel) -> dict:
@@ -141,7 +147,7 @@ def _status_sort_key(data_evento: str, record_id: str) -> str:
 def _item_key(record_id: str, data_evento: date) -> dict[str, str]:
     return {
         "PK": f"TENANT#{TENANT_ID}",
-        "SK": f"DESOC#{data_evento.isoformat()}#{record_id}",
+        "SK": f"MOV#{data_evento.isoformat()}#{record_id}",
     }
 
 
@@ -152,16 +158,43 @@ def _imovel_key(id_imovel: str) -> dict[str, str]:
     }
 
 
-def _from_item(item: dict) -> Desocupacao:
+def _optional_date(value: Any) -> date | None:
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str) and value:
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    return _float(value)
+
+
+def _optional_int(value: Any) -> int | None:
+    if value is None or value == "":
+        return None
+    return _int(value)
+
+
+def _optional_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _from_item(item: dict) -> Movimentacao:
     data_evento = _date(item.get("dataEvento", item.get("dataFim")))
-    data_inicio_contrato = _date(
-        item.get("dataInicioContrato", item.get("dataInicio")),
-        default=data_evento,
-    )
+    data_inicio_contrato = _optional_date(item.get("dataInicioContrato", item.get("dataInicio")))
     mes = _int(item.get("mes"), data_evento.month)
     ano = _int(item.get("ano"), data_evento.year)
 
-    return Desocupacao(
+    return Movimentacao(
         id=_text(item.get("id"), "sem-id"),
         status=_record_status(item.get("status")),
         id_imovel=_text(item.get("idImovel")),
@@ -174,9 +207,9 @@ def _from_item(item: dict) -> Desocupacao:
         status_evento=_text(item.get("statusEvento"), "Legado"),
         data_evento=data_evento,
         data_inicio_contrato=data_inicio_contrato,
-        valor_aluguel=_float(item.get("valorAluguel")),
-        dias_vacancia=_int(item.get("diasVacancia")),
-        motivo_desocupacao=_text(item.get("motivoDesocupacao")),
+        valor_aluguel=_optional_float(item.get("valorAluguel")),
+        dias_vacancia=_optional_int(item.get("diasVacancia")),
+        motivo_desocupacao=_optional_text(item.get("motivoDesocupacao")),
         mes=mes,
         ano=ano,
         criado_por=_text(item.get("criadoPor"), "legacy"),
@@ -199,11 +232,11 @@ def _from_imovel_item(item: dict) -> Imovel:
     )
 
 
-def put(d: Desocupacao) -> None:
+def put(d: Movimentacao) -> None:
     _table.put_item(Item=_to_item(d))
 
 
-def get(record_id: str, data_evento: date) -> Desocupacao | None:
+def get(record_id: str, data_evento: date) -> Movimentacao | None:
     resp = _table.get_item(
         Key=_item_key(record_id, data_evento),
         ConsistentRead=True,
@@ -263,7 +296,7 @@ def list_imoveis(limit: int = 200) -> list[Imovel]:
     return records[:limit]
 
 
-def list_by_month(year: int, month: int) -> list[Desocupacao]:
+def list_by_month(year: int, month: int) -> list[Movimentacao]:
     yyyy_mm = f"{year:04d}-{month:02d}"
     resp = _table.query(
         IndexName="GSI2",
@@ -274,7 +307,7 @@ def list_by_month(year: int, month: int) -> list[Desocupacao]:
     return [_from_item(i) for i in resp.get("Items", [])]
 
 
-def list_all(limit: int = 200) -> list[Desocupacao]:
+def list_all(limit: int = 200) -> list[Movimentacao]:
     resp = _table.query(
         IndexName="GSI2",
         KeyConditionExpression=Key("GSI2PK").eq(_status_partition_key(ACTIVE_STATUS)),
@@ -284,7 +317,7 @@ def list_all(limit: int = 200) -> list[Desocupacao]:
     return [_from_item(i) for i in resp.get("Items", [])]
 
 
-def list_all_pages() -> Iterable[Desocupacao]:
+def list_all_pages() -> Iterable[Movimentacao]:
     last = None
     while True:
         kwargs = {

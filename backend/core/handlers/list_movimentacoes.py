@@ -1,4 +1,4 @@
-"""GET /desocupacoes?ano=&mes= -- lists records."""
+"""GET /movimentacoes?ano=&mes= -- lists records."""
 from __future__ import annotations
 
 from infra import dynamo_repo

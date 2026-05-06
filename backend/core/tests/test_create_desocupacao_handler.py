@@ -7,7 +7,7 @@ os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 os.environ.setdefault("AWS_EC2_METADATA_DISABLED", "true")
 
 from domain.models import Imovel  # noqa: E402
-from handlers import create_desocupacao  # noqa: E402
+from handlers import create_movimentacao  # noqa: E402
 
 
 def _imovel() -> Imovel:
@@ -19,7 +19,7 @@ def _imovel() -> Imovel:
         area_privativa=68.78,
         tipologia="2Q",
         uso="Residencial",
-        mobiliado="NÃ£o",
+        mobiliado="N\u00e3o",
         criado_por="user-1",
         criado_em="2025-07-03T12:00:00Z",
     )
@@ -53,14 +53,14 @@ def _event() -> dict:
 
 
 def test_handler_saves_to_dynamo_then_appends_to_google_sheets(monkeypatch):
-    monkeypatch.setattr(create_desocupacao.uuid, "uuid4", lambda: "uuid-123")
+    monkeypatch.setattr(create_movimentacao.uuid, "uuid4", lambda: "uuid-123")
     put = Mock()
     append = Mock()
-    monkeypatch.setattr(create_desocupacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
-    monkeypatch.setattr(create_desocupacao.dynamo_repo, "put", put)
-    monkeypatch.setattr(create_desocupacao.google_sheets_repo, "append_desocupacao", append)
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
 
-    response = create_desocupacao.handler(_event(), None)
+    response = create_movimentacao.handler(_event(), None)
     body = json.loads(response["body"])
 
     assert response["statusCode"] == 201
@@ -74,14 +74,14 @@ def test_handler_saves_to_dynamo_then_appends_to_google_sheets(monkeypatch):
 
 
 def test_handler_returns_502_when_google_sheets_append_fails_after_dynamo(monkeypatch):
-    monkeypatch.setattr(create_desocupacao.uuid, "uuid4", lambda: "uuid-123")
+    monkeypatch.setattr(create_movimentacao.uuid, "uuid4", lambda: "uuid-123")
     put = Mock()
     append = Mock(side_effect=RuntimeError("sheets unavailable"))
-    monkeypatch.setattr(create_desocupacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
-    monkeypatch.setattr(create_desocupacao.dynamo_repo, "put", put)
-    monkeypatch.setattr(create_desocupacao.google_sheets_repo, "append_desocupacao", append)
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
 
-    response = create_desocupacao.handler(_event(), None)
+    response = create_movimentacao.handler(_event(), None)
     body = json.loads(response["body"])
 
     assert response["statusCode"] == 502

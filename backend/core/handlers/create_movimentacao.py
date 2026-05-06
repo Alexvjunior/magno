@@ -1,12 +1,12 @@
-"""POST /desocupacoes -- validates payload, persists to DynamoDB."""
+"""POST /movimentacoes -- validates payload, persists to DynamoDB."""
 from __future__ import annotations
 
 import logging
 import uuid
 from datetime import datetime, timezone
 
-from domain.models import Desocupacao
-from domain.validators import ValidationError, validate_desocupacao
+from domain.models import Movimentacao
+from domain.validators import ValidationError, validate_movimentacao
 from infra import dynamo_repo, google_sheets_repo
 
 from ._common import get_user_sub, json_response, parse_body
@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 def handler(event: dict, _context) -> dict:
     payload = parse_body(event)
     try:
-        validated = validate_desocupacao(payload)
+        validated = validate_movimentacao(payload)
     except ValidationError as e:
         return json_response(422, {"errors": e.errors})
 
@@ -32,7 +32,7 @@ def handler(event: dict, _context) -> dict:
         )
 
     user_sub = get_user_sub(event)
-    record = Desocupacao(
+    record = Movimentacao(
         id=str(uuid.uuid4()),
         status="ACTIVE",
         id_imovel=imovel.id_imovel,
@@ -55,13 +55,13 @@ def handler(event: dict, _context) -> dict:
     )
     dynamo_repo.put(record)
     try:
-        google_sheets_repo.append_desocupacao(record)
+        google_sheets_repo.append_movimentacao(record)
     except Exception as exc:
-        LOGGER.exception("Failed to append desocupacao %s to Google Sheets", record.id)
+        LOGGER.exception("Failed to append movimentacao %s to Google Sheets", record.id)
         return json_response(
             502,
             {
-                "message": "Desocupacao salva no DynamoDB, mas falhou ao enviar para Google Sheets",
+                "message": "Movimentacao salva no DynamoDB, mas falhou ao enviar para Google Sheets",
                 "dynamoSaved": True,
                 "id": record.id,
                 "error": str(exc),

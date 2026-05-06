@@ -79,7 +79,7 @@ describe('AppHeader', () => {
     expect(screen.getByText('user@example.com')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Cadastros' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Desocupacoes' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Movimentacoes' }));
     expect(onOpenCadastro).toHaveBeenCalledOnce();
 
     fireEvent.click(screen.getByRole('button', { name: 'Cadastros' }));

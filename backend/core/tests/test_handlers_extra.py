@@ -10,11 +10,11 @@ os.environ.setdefault("AWS_EC2_METADATA_DISABLED", "true")
 
 from domain.models import Desocupacao, Imovel  # noqa: E402
 from handlers import (  # noqa: E402
-    create_desocupacao,
+    create_movimentacao,
     create_imovel,
-    delete_desocupacao,
+    delete_movimentacao,
     export_xlsx,
-    list_desocupacoes,
+    list_movimentacoes,
 )
 
 
@@ -51,7 +51,7 @@ def _imovel() -> Imovel:
         area_privativa=68.78,
         tipologia="2Q",
         uso="Residencial",
-        mobiliado="NÃ£o",
+        mobiliado="N\u00e3o",
         criado_por="user-1",
         criado_em="2025-07-03T12:00:00Z",
     )
@@ -93,13 +93,13 @@ def _imovel_payload(**overrides):
     return payload
 
 
-def test_create_desocupacao_invalid_payload_does_not_persist(monkeypatch):
+def test_create_movimentacao_invalid_payload_does_not_persist(monkeypatch):
     put = Mock()
     append = Mock()
-    monkeypatch.setattr(create_desocupacao.dynamo_repo, "put", put)
-    monkeypatch.setattr(create_desocupacao.google_sheets_repo, "append_desocupacao", append)
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
 
-    response = create_desocupacao.handler({"body": json.dumps({"cidade": ""})}, None)
+    response = create_movimentacao.handler({"body": json.dumps({"cidade": ""})}, None)
 
     assert response["statusCode"] == 422
     assert "errors" in json.loads(response["body"])
@@ -107,23 +107,23 @@ def test_create_desocupacao_invalid_payload_does_not_persist(monkeypatch):
     append.assert_not_called()
 
 
-def test_create_desocupacao_malformed_json_returns_validation_errors(monkeypatch):
-    monkeypatch.setattr(create_desocupacao.dynamo_repo, "put", Mock())
-    monkeypatch.setattr(create_desocupacao.google_sheets_repo, "append_desocupacao", Mock())
+def test_create_movimentacao_malformed_json_returns_validation_errors(monkeypatch):
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", Mock())
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", Mock())
 
-    response = create_desocupacao.handler({"body": "{bad"}, None)
+    response = create_movimentacao.handler({"body": "{bad"}, None)
 
     assert response["statusCode"] == 422
     assert "idImovel" in json.loads(response["body"])["errors"]
 
 
-def test_create_desocupacao_without_user_claim_uses_anonymous(monkeypatch):
-    monkeypatch.setattr(create_desocupacao.uuid, "uuid4", lambda: "uuid-123")
-    monkeypatch.setattr(create_desocupacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
-    monkeypatch.setattr(create_desocupacao.dynamo_repo, "put", Mock())
-    monkeypatch.setattr(create_desocupacao.google_sheets_repo, "append_desocupacao", Mock())
+def test_create_movimentacao_without_user_claim_uses_anonymous(monkeypatch):
+    monkeypatch.setattr(create_movimentacao.uuid, "uuid4", lambda: "uuid-123")
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", Mock())
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", Mock())
 
-    response = create_desocupacao.handler({"body": json.dumps(_desocupacao_payload())}, None)
+    response = create_movimentacao.handler({"body": json.dumps(_desocupacao_payload())}, None)
 
     assert response["statusCode"] == 201
     assert json.loads(response["body"])["criadoPor"] == "anonymous"
@@ -166,13 +166,13 @@ def test_create_imovel_propagates_unexpected_put_error(monkeypatch):
         create_imovel.handler({"body": json.dumps(_imovel_payload())}, None)
 
 
-def test_list_desocupacoes_without_filters_uses_list_all(monkeypatch):
+def test_list_movimentacoes_without_filters_uses_list_all(monkeypatch):
     list_all = Mock(return_value=[_desocupacao()])
     list_by_month = Mock()
-    monkeypatch.setattr(list_desocupacoes.dynamo_repo, "list_all", list_all)
-    monkeypatch.setattr(list_desocupacoes.dynamo_repo, "list_by_month", list_by_month)
+    monkeypatch.setattr(list_movimentacoes.dynamo_repo, "list_all", list_all)
+    monkeypatch.setattr(list_movimentacoes.dynamo_repo, "list_by_month", list_by_month)
 
-    response = list_desocupacoes.handler({}, None)
+    response = list_movimentacoes.handler({}, None)
 
     assert response["statusCode"] == 200
     assert json.loads(response["body"])[0]["id"] == "desoc-1"
@@ -180,13 +180,13 @@ def test_list_desocupacoes_without_filters_uses_list_all(monkeypatch):
     list_by_month.assert_not_called()
 
 
-def test_list_desocupacoes_with_year_and_month_uses_month_index(monkeypatch):
+def test_list_movimentacoes_with_year_and_month_uses_month_index(monkeypatch):
     list_all = Mock()
     list_by_month = Mock(return_value=[_desocupacao()])
-    monkeypatch.setattr(list_desocupacoes.dynamo_repo, "list_all", list_all)
-    monkeypatch.setattr(list_desocupacoes.dynamo_repo, "list_by_month", list_by_month)
+    monkeypatch.setattr(list_movimentacoes.dynamo_repo, "list_all", list_all)
+    monkeypatch.setattr(list_movimentacoes.dynamo_repo, "list_by_month", list_by_month)
 
-    response = list_desocupacoes.handler(
+    response = list_movimentacoes.handler(
         {"queryStringParameters": {"ano": "2025", "mes": "7"}},
         None,
     )
@@ -196,10 +196,10 @@ def test_list_desocupacoes_with_year_and_month_uses_month_index(monkeypatch):
     list_all.assert_not_called()
 
 
-def test_list_desocupacoes_with_invalid_month_filter_returns_400(monkeypatch):
-    monkeypatch.setattr(list_desocupacoes.dynamo_repo, "list_all", Mock())
+def test_list_movimentacoes_with_invalid_month_filter_returns_400(monkeypatch):
+    monkeypatch.setattr(list_movimentacoes.dynamo_repo, "list_all", Mock())
 
-    response = list_desocupacoes.handler(
+    response = list_movimentacoes.handler(
         {"queryStringParameters": {"ano": "2025", "mes": "x"}},
         None,
     )
@@ -207,11 +207,11 @@ def test_list_desocupacoes_with_invalid_month_filter_returns_400(monkeypatch):
     assert response["statusCode"] == 400
 
 
-def test_list_desocupacoes_with_partial_filter_keeps_current_list_all_behavior(monkeypatch):
+def test_list_movimentacoes_with_partial_filter_keeps_current_list_all_behavior(monkeypatch):
     list_all = Mock(return_value=[])
-    monkeypatch.setattr(list_desocupacoes.dynamo_repo, "list_all", list_all)
+    monkeypatch.setattr(list_movimentacoes.dynamo_repo, "list_all", list_all)
 
-    response = list_desocupacoes.handler({"queryStringParameters": {"ano": "2025"}}, None)
+    response = list_movimentacoes.handler({"queryStringParameters": {"ano": "2025"}}, None)
 
     assert response["statusCode"] == 200
     list_all.assert_called_once_with(limit=200)
@@ -240,7 +240,7 @@ def test_export_xlsx_for_month_uploads_and_returns_presigned_url(monkeypatch):
     assert response["statusCode"] == 200
     assert body == {
         "url": "https://signed",
-        "filename": "desocupacoes-2025-07-20250704T123000Z.xlsx",
+        "filename": "movimentacoes-2025-07-20250704T123000Z.xlsx",
         "count": 1,
     }
     assert calls == [
@@ -260,7 +260,7 @@ def test_export_xlsx_without_filters_uses_all_pages(monkeypatch):
     body = json.loads(response["body"])
 
     assert response["statusCode"] == 200
-    assert body["filename"] == "desocupacoes-all-20250704T123000Z.xlsx"
+    assert body["filename"] == "movimentacoes-all-20250704T123000Z.xlsx"
     export_xlsx.dynamo_repo.list_all_pages.assert_called_once()
 
 
@@ -276,15 +276,15 @@ def test_export_xlsx_invalid_filters_return_400(monkeypatch):
     export_xlsx.dynamo_repo.list_by_month.assert_not_called()
 
 
-def test_delete_desocupacao_requires_id_and_date(monkeypatch):
+def test_delete_movimentacao_requires_id_and_date(monkeypatch):
     mark_deleted = Mock()
-    monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", mark_deleted)
+    monkeypatch.setattr(delete_movimentacao.dynamo_repo, "mark_deleted", mark_deleted)
 
-    missing_id = delete_desocupacao.handler(
+    missing_id = delete_movimentacao.handler(
         {"pathParameters": {"id": " "}, "queryStringParameters": {"dataEvento": "2025-07-03"}},
         None,
     )
-    missing_date = delete_desocupacao.handler(
+    missing_date = delete_movimentacao.handler(
         {"pathParameters": {"id": "abc"}, "queryStringParameters": {}},
         None,
     )
@@ -294,16 +294,16 @@ def test_delete_desocupacao_requires_id_and_date(monkeypatch):
     mark_deleted.assert_not_called()
 
 
-def test_delete_desocupacao_returns_success_when_sheet_row_was_already_missing(monkeypatch):
-    monkeypatch.setattr(delete_desocupacao.dynamo_repo, "get", lambda *_: _desocupacao())
-    monkeypatch.setattr(delete_desocupacao.dynamo_repo, "mark_deleted", lambda *_: True)
+def test_delete_movimentacao_returns_success_when_sheet_row_was_already_missing(monkeypatch):
+    monkeypatch.setattr(delete_movimentacao.dynamo_repo, "get", lambda *_: _desocupacao())
+    monkeypatch.setattr(delete_movimentacao.dynamo_repo, "mark_deleted", lambda *_: True)
     monkeypatch.setattr(
-        delete_desocupacao.google_sheets_repo,
-        "delete_desocupacao_by_imovel_and_date",
+        delete_movimentacao.google_sheets_repo,
+        "delete_movimentacao_by_imovel_and_date",
         lambda *_: False,
     )
 
-    response = delete_desocupacao.handler(
+    response = delete_movimentacao.handler(
         {"pathParameters": {"id": "abc"}, "queryStringParameters": {"dataEvento": "2025-07-03"}},
         None,
     )

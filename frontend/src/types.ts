@@ -5,7 +5,7 @@ export type Mobiliado = 'Sim' | 'Não';
 export type StatusAtualImovel = 'Vago' | 'Locado';
 export type StatusEvento = 'Desocupacao' | 'Locacao';
 
-export interface DesocupacaoInput {
+export interface MovimentacaoInput {
   idImovel: string;
   cidade: string;
   edificio: string;
@@ -15,15 +15,15 @@ export interface DesocupacaoInput {
   uso: Uso;
   statusEvento: StatusEvento;
   dataEvento: string;          // ISO yyyy-mm-dd
-  dataInicioContrato: string;  // ISO yyyy-mm-dd
-  valorAluguel: number;
-  diasVacancia: number;
-  motivoDesocupacao: string;
+  dataInicioContrato?: string | null;  // ISO yyyy-mm-dd
+  valorAluguel?: number | null;
+  diasVacancia?: number | null;
+  motivoDesocupacao?: string | null;
   mes: number;
   ano: number;
 }
 
-export interface Desocupacao extends DesocupacaoInput {
+export interface Movimentacao extends MovimentacaoInput {
   id: string;
   status: RecordStatus;
   criadoPor: string;

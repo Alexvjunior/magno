@@ -1,6 +1,6 @@
 import pytest
 
-from domain.validators import ValidationError, validate_desocupacao, validate_imovel
+from domain.validators import ValidationError, validate_movimentacao, validate_imovel
 
 
 def _good_payload(**overrides):
@@ -40,7 +40,7 @@ def _good_imovel_payload(**overrides):
 
 
 def test_validates_good_payload():
-    out = validate_desocupacao(_good_payload())
+    out = validate_movimentacao(_good_payload())
     assert out.id_imovel == "FLORIANOPOLIS|TOP VISION RESIDENCE|1227"
     assert out.status_evento == "Desocupacao"
     assert out.mes == 7
@@ -49,52 +49,94 @@ def test_validates_good_payload():
 
 def test_rejects_missing_required_fields_with_new_names():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao({})
+        validate_movimentacao({})
 
     errors = ei.value.errors
     assert "idImovel" in errors
     assert "statusEvento" in errors
     assert "dataEvento" in errors
-    assert "dataInicioContrato" in errors
     assert "empreendimento" not in errors
     assert "apartamento" not in errors
 
 
 def test_rejects_missing_id_imovel():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao(_good_payload(idImovel=""))
+        validate_movimentacao(_good_payload(idImovel=""))
     assert "idImovel" in ei.value.errors
 
 
 def test_rejects_invalid_status_evento():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao(_good_payload(statusEvento="Vago"))
+        validate_movimentacao(_good_payload(statusEvento="Vago"))
     assert "statusEvento" in ei.value.errors
 
 
 def test_rejects_data_evento_before_data_inicio_contrato():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao(
+        validate_movimentacao(
             _good_payload(dataInicioContrato="2025-07-10", dataEvento="2025-07-01")
         )
     assert "dataEvento" in ei.value.errors
 
 
+def test_requires_conditional_fields_by_status_evento():
+    with pytest.raises(ValidationError) as desocupacao_error:
+        validate_movimentacao(
+            _good_payload(
+                dataInicioContrato="",
+                valorAluguel=None,
+                diasVacancia=None,
+                motivoDesocupacao="",
+            )
+        )
+    assert "dataInicioContrato" in desocupacao_error.value.errors
+    assert "motivoDesocupacao" in desocupacao_error.value.errors
+    assert "valorAluguel" not in desocupacao_error.value.errors
+    assert "diasVacancia" not in desocupacao_error.value.errors
+
+    with pytest.raises(ValidationError) as locacao_error:
+        validate_movimentacao(
+            _good_payload(
+                statusEvento="Locacao",
+                dataInicioContrato="",
+                valorAluguel=None,
+                diasVacancia=None,
+                motivoDesocupacao="",
+            )
+        )
+    assert "valorAluguel" in locacao_error.value.errors
+    assert "diasVacancia" in locacao_error.value.errors
+    assert "dataInicioContrato" not in locacao_error.value.errors
+    assert "motivoDesocupacao" not in locacao_error.value.errors
+
+    out = validate_movimentacao(
+        _good_payload(
+            statusEvento="Locacao",
+            dataInicioContrato="",
+            valorAluguel=2500,
+            diasVacancia=0,
+            motivoDesocupacao="",
+        )
+    )
+    assert out.data_inicio_contrato is None
+    assert out.motivo_desocupacao is None
+
+
 def test_rejects_non_integer_dias_vacancia():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao(_good_payload(diasVacancia=1.5))
+        validate_movimentacao(_good_payload(diasVacancia=1.5))
     assert "diasVacancia" in ei.value.errors
 
 
 def test_rejects_mes_out_of_range():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao(_good_payload(mes=13))
+        validate_movimentacao(_good_payload(mes=13))
     assert "mes" in ei.value.errors
 
 
 def test_rejects_invalid_ano():
     with pytest.raises(ValidationError) as ei:
-        validate_desocupacao(_good_payload(ano=1999))
+        validate_movimentacao(_good_payload(ano=1999))
     assert "ano" in ei.value.errors
 
 

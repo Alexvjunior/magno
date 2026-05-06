@@ -55,7 +55,7 @@ def test_from_item_maps_legacy_fields_to_current_contract():
     assert out.status == "ACTIVE"
     assert out.id_imovel == "Nao informado"
     assert out.status_evento == "Legado"
-    assert out.valor_aluguel == 0.0
+    assert out.valor_aluguel is None
     assert out.to_api_dict()["edificio"] == "Top Vision Residence"
 
 
@@ -104,7 +104,7 @@ def test_mark_deleted_updates_status_index(monkeypatch):
     kwargs = table.update_item.call_args.kwargs
     assert kwargs["Key"] == {
         "PK": "TENANT#default",
-        "SK": "DESOC#2025-07-03#abc",
+        "SK": "MOV#2025-07-03#abc",
     }
     assert kwargs["ExpressionAttributeValues"][":deleted"] == "DELETED"
     assert kwargs["ExpressionAttributeValues"][":gsi2pk"] == "STATUS#DELETED"
@@ -221,7 +221,7 @@ def test_get_desocupacao_returns_record_by_key(monkeypatch):
 
     assert dynamo_repo.get("abc", date(2025, 7, 3)).id_imovel == "FLORIANOPOLIS|TOP VISION RESIDENCE|1227"
     table.get_item.assert_called_once_with(
-        Key={"PK": "TENANT#default", "SK": "DESOC#2025-07-03#abc"},
+        Key={"PK": "TENANT#default", "SK": "MOV#2025-07-03#abc"},
         ConsistentRead=True,
     )
 

@@ -4,10 +4,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import AppHeader from '../components/AppHeader';
 import { env } from '../config/env';
 import { apiService } from '../services/api';
-import { desocupacaoSchema, statusEventoValues, type DesocupacaoForm } from '../services/schemas';
-import type { Desocupacao, DesocupacaoInput, Imovel } from '../types';
+import { movimentacaoSchema, statusEventoValues, type MovimentacaoForm } from '../services/schemas';
+import type { Imovel, Movimentacao, MovimentacaoInput } from '../types';
 
-const emptyValues: DesocupacaoForm = {
+const emptyValues: MovimentacaoForm = {
   idImovel: '',
   cidade: '',
   edificio: '',
@@ -15,7 +15,7 @@ const emptyValues: DesocupacaoForm = {
   areaPrivativa: undefined as unknown as number,
   tipologia: '',
   uso: 'Residencial',
-  statusEvento: '' as DesocupacaoForm['statusEvento'],
+  statusEvento: '' as MovimentacaoForm['statusEvento'],
   dataEvento: '',
   dataInicioContrato: '',
   valorAluguel: undefined as unknown as number,
@@ -25,7 +25,7 @@ const emptyValues: DesocupacaoForm = {
   ano: undefined as unknown as number,
 };
 
-function valuesFromImovel(imovel: Imovel): DesocupacaoForm {
+function valuesFromImovel(imovel: Imovel): MovimentacaoForm {
   return {
     ...emptyValues,
     idImovel: imovel.idImovel,
@@ -43,7 +43,7 @@ type CadastroContentProps = {
 };
 
 export function CadastroContent({ embedded = false }: CadastroContentProps) {
-  const [items, setItems] = useState<Desocupacao[]>([]);
+  const [items, setItems] = useState<Movimentacao[]>([]);
   const [imoveis, setImoveis] = useState<Imovel[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -55,17 +55,18 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     reset,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<DesocupacaoForm>({
-    resolver: zodResolver(desocupacaoSchema),
+  } = useForm<MovimentacaoForm>({
+    resolver: zodResolver(movimentacaoSchema),
     defaultValues: emptyValues,
   });
 
   const selectedIdImovel = watch('idImovel');
+  const selectedStatusEvento = watch('statusEvento');
   const selectedImovel = imoveis.find((item) => item.idImovel === selectedIdImovel);
 
-  async function refreshDesocupacoes() {
+  async function refreshMovimentacoes() {
     try {
-      const list = await apiService.listDesocupacoes();
+      const list = await apiService.listMovimentacoes();
       setItems(list.slice(0, 20));
     } catch (e) {
       setServerError(e instanceof Error ? e.message : 'Falha ao carregar lista');
@@ -82,7 +83,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
   }
 
   useEffect(() => {
-    refreshDesocupacoes();
+    refreshMovimentacoes();
     refreshImoveis();
   }, []);
 
@@ -93,7 +94,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     reset(imovel ? valuesFromImovel(imovel) : emptyValues);
   }
 
-  async function onSubmit(values: DesocupacaoForm) {
+  async function onSubmit(values: MovimentacaoForm) {
     if (!selectedImovel) {
       setServerError('Selecione um imovel cadastrado.');
       return;
@@ -101,7 +102,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
 
     setServerError(null);
     setSuccess(null);
-    const input: DesocupacaoInput = {
+    const input: MovimentacaoInput = {
       ...values,
       idImovel: selectedImovel.idImovel,
       cidade: selectedImovel.cidade,
@@ -113,10 +114,10 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     };
 
     try {
-      await apiService.createDesocupacao(input);
-      setSuccess('Desocupacao cadastrada.');
+      await apiService.createMovimentacao(input);
+      setSuccess('Movimentacao cadastrada.');
       reset(emptyValues);
-      refreshDesocupacoes();
+      refreshMovimentacoes();
     } catch (e) {
       setServerError(e instanceof Error ? e.message : 'Falha ao cadastrar');
     }
@@ -137,9 +138,9 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     }
   }
 
-  async function onRemove(item: Desocupacao) {
+  async function onRemove(item: Movimentacao) {
     const confirmed = window.confirm(
-      `Remover a desocupacao de ${item.edificio} - apto ${item.numeroApto}?`,
+      `Remover a movimentacao de ${item.edificio} - apto ${item.numeroApto}?`,
     );
     if (!confirmed) return;
 
@@ -147,9 +148,9 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     setSuccess(null);
     setRemovingIds((current) => new Set(current).add(item.id));
     try {
-      await apiService.removeDesocupacao(item.id, item.dataEvento);
-      setSuccess('Desocupacao removida.');
-      await refreshDesocupacoes();
+      await apiService.removeMovimentacao(item.id, item.dataEvento);
+      setSuccess('Movimentacao removida.');
+      await refreshMovimentacoes();
     } catch (e) {
       setServerError(e instanceof Error ? e.message : 'Falha ao remover');
     } finally {
@@ -164,7 +165,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
   return (
     <div className={embedded ? 'cadastro-content cadastro-content-embedded' : 'container'}>
       <div className="card">
-        <h1>Nova desocupacao</h1>
+        <h1>Nova movimentacao</h1>
         <p className="muted">Selecione um imovel cadastrado e preencha os dados do evento.</p>
 
         {serverError && <div className="alert alert-error">{serverError}</div>}
@@ -190,7 +191,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
             </select>
             {errors.idImovel && <span className="field-error">{errors.idImovel.message}</span>}
             {imoveis.length === 0 && (
-              <span className="muted">Cadastre um imovel antes de registrar desocupacoes.</span>
+              <span className="muted">Cadastre um imovel antes de registrar movimentacoes.</span>
             )}
           </div>
 
@@ -273,7 +274,9 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
             </div>
 
             <div className="field">
-              <label htmlFor="dataInicioContrato">Data de Inicio do Contrato *</label>
+              <label htmlFor="dataInicioContrato">
+                Data de Inicio do Contrato {selectedStatusEvento === 'Desocupacao' ? '*' : ''}
+              </label>
               <input
                 id="dataInicioContrato"
                 type="date"
@@ -286,7 +289,9 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
             </div>
 
             <div className="field">
-              <label htmlFor="valorAluguel">Valor do Aluguel (R$) *</label>
+              <label htmlFor="valorAluguel">
+                Valor do Aluguel (R$) {selectedStatusEvento === 'Locacao' ? '*' : ''}
+              </label>
               <input
                 id="valorAluguel"
                 type="number"
@@ -301,7 +306,9 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
             </div>
 
             <div className="field">
-              <label htmlFor="diasVacancia">Dias de Vacancia *</label>
+              <label htmlFor="diasVacancia">
+                Dias de Vacancia {selectedStatusEvento === 'Locacao' ? '*' : ''}
+              </label>
               <input
                 id="diasVacancia"
                 type="number"
@@ -344,7 +351,9 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
           </div>
 
           <div className="field">
-            <label htmlFor="motivoDesocupacao">Motivo da Desocupacao *</label>
+            <label htmlFor="motivoDesocupacao">
+              Motivo da Desocupacao {selectedStatusEvento === 'Desocupacao' ? '*' : ''}
+            </label>
             <textarea
               id="motivoDesocupacao"
               rows={3}
@@ -408,15 +417,15 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                     <td>{d.uso}</td>
                     <td>{d.statusEvento}</td>
                     <td>{d.dataEvento}</td>
-                    <td>{d.dataInicioContrato}</td>
-                    <td>{d.valorAluguel.toFixed(2)}</td>
-                    <td>{d.diasVacancia}</td>
+                    <td>{d.dataInicioContrato ?? ''}</td>
+                    <td>{d.valorAluguel == null ? '' : d.valorAluguel.toFixed(2)}</td>
+                    <td>{d.diasVacancia ?? ''}</td>
                     <td>{d.mes}</td>
                     <td>{d.ano}</td>
-                    <td title={d.motivoDesocupacao}>
-                      {d.motivoDesocupacao.length > 50
+                    <td title={d.motivoDesocupacao ?? ''}>
+                      {d.motivoDesocupacao && d.motivoDesocupacao.length > 50
                         ? `${d.motivoDesocupacao.slice(0, 50)}...`
-                        : d.motivoDesocupacao}
+                        : (d.motivoDesocupacao ?? '')}
                     </td>
                     <td>
                       <button
@@ -442,7 +451,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
 export default function CadastroPage() {
   return (
     <>
-      <AppHeader title="Cadastro de Desocupacoes" />
+      <AppHeader title="Cadastro de Movimentacoes" />
       <CadastroContent />
     </>
   );

@@ -1,7 +1,7 @@
-import type { Desocupacao, Imovel } from '../types';
+import type { Imovel, Movimentacao } from '../types';
 
-export const desocupacaoFixture: Desocupacao = {
-  id: 'desoc-1',
+export const movimentacaoFixture: Movimentacao = {
+  id: 'mov-1',
   status: 'ACTIVE',
   idImovel: 'FLORIANOPOLIS|PLAZA MEDITERRANEO|326',
   cidade: 'Florianopolis',

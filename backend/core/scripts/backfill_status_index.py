@@ -1,4 +1,4 @@
-"""Backfills logical-delete status fields for existing desocupacoes.
+"""Backfills logical-delete status fields for existing movimentacoes.
 
 Run after the GSI2 deployment finishes:
     python scripts/backfill_status_index.py

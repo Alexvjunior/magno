@@ -6,7 +6,7 @@ import { mockAuth } from '../services/auth.mock';
 import { renderWithRouter } from '../test/render';
 
 vi.mock('./CadastroPage', () => ({
-  CadastroContent: () => <div>Formulario desocupacoes</div>,
+  CadastroContent: () => <div>Formulario movimentacoes</div>,
 }));
 
 vi.mock('./CadastroImoveisPage', () => ({
@@ -26,9 +26,9 @@ describe('DashboardPage', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Cadastros' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Desocupacoes' }));
-    expect(screen.getByRole('dialog', { name: 'Cadastro de desocupacoes' })).toBeInTheDocument();
-    expect(screen.getByText('Formulario desocupacoes')).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: 'Movimentacoes' }));
+    expect(screen.getByRole('dialog', { name: 'Cadastro de movimentacoes' })).toBeInTheDocument();
+    expect(screen.getByText('Formulario movimentacoes')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Fechar' }));
 
     await user.click(screen.getByRole('button', { name: 'Cadastros' }));

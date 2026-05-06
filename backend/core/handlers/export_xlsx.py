@@ -1,4 +1,4 @@
-"""GET /desocupacoes/export -- generates an XLSX and returns a presigned S3 URL."""
+"""GET /movimentacoes/export -- generates an XLSX and returns a presigned S3 URL."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -34,7 +34,7 @@ def handler(event: dict, _context) -> dict:
         200,
         {
             "url": url,
-            "filename": f"desocupacoes-{scope}-{stamp}.xlsx",
+            "filename": f"movimentacoes-{scope}-{stamp}.xlsx",
             "count": len(items),
         },
     )

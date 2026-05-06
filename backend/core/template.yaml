@@ -37,14 +37,14 @@ Globals:
     Tracing: Active
     Environment:
       Variables:
-        DDB_TABLE: !Ref DesocupacoesTable
+        DDB_TABLE: !Ref RegistrosTable
         EXPORTS_BUCKET: !Ref ExportsBucket
 
 Resources:
-  DesocupacoesTable:
+  RegistrosTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: !Sub ${AppName}-${Environment}-desocupacoes
+      TableName: !Sub ${AppName}-${Environment}-registros
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: PK
@@ -117,12 +117,12 @@ Resources:
             IdentitySource: $request.header.Authorization
         DefaultAuthorizer: CognitoAuthorizer
 
-  CreateDesocupacaoFn:
+  CreateMovimentacaoFn:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AppName}-${Environment}-create-desocupacao
+      FunctionName: !Sub ${AppName}-${Environment}-create-movimentacao
       CodeUri: .
-      Handler: handlers.create_desocupacao.handler
+      Handler: handlers.create_movimentacao.handler
       Environment:
         Variables:
           GOOGLE_SERVICE_ACCOUNT_SECRET_ARN: !Ref GoogleServiceAccountSecretArn
@@ -132,19 +132,19 @@ Resources:
         - !Ref DepsLayerArn
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref DesocupacoesTable
+            TableName: !Ref RegistrosTable
         - Statement:
             - Effect: Allow
               Action:
                 - secretsmanager:GetSecretValue
               Resource: !Ref GoogleServiceAccountSecretArn
       Events:
-        CreateDesoc:
+        CreateMovimentacao:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Method: POST
-            Path: /desocupacoes
+            Path: /movimentacoes
 
   CreateImovelFn:
     Type: AWS::Serverless::Function
@@ -161,7 +161,7 @@ Resources:
         - !Ref DepsLayerArn
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref DesocupacoesTable
+            TableName: !Ref RegistrosTable
         - Statement:
             - Effect: Allow
               Action:
@@ -175,24 +175,24 @@ Resources:
             Method: POST
             Path: /imoveis
 
-  ListDesocupacoesFn:
+  ListMovimentacoesFn:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AppName}-${Environment}-list-desocupacoes
+      FunctionName: !Sub ${AppName}-${Environment}-list-movimentacoes
       CodeUri: .
-      Handler: handlers.list_desocupacoes.handler
+      Handler: handlers.list_movimentacoes.handler
       Layers:
         - !Ref DepsLayerArn
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref DesocupacoesTable
+            TableName: !Ref RegistrosTable
       Events:
-        ListDesoc:
+        ListMovimentacoes:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Method: GET
-            Path: /desocupacoes
+            Path: /movimentacoes
 
   ListImoveisFn:
     Type: AWS::Serverless::Function
@@ -204,7 +204,7 @@ Resources:
         - !Ref DepsLayerArn
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref DesocupacoesTable
+            TableName: !Ref RegistrosTable
       Events:
         ListImoveis:
           Type: HttpApi
@@ -213,12 +213,12 @@ Resources:
             Method: GET
             Path: /imoveis
 
-  DeleteDesocupacaoFn:
+  DeleteMovimentacaoFn:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${AppName}-${Environment}-delete-desocupacao
+      FunctionName: !Sub ${AppName}-${Environment}-delete-movimentacao
       CodeUri: .
-      Handler: handlers.delete_desocupacao.handler
+      Handler: handlers.delete_movimentacao.handler
       Environment:
         Variables:
           GOOGLE_SERVICE_ACCOUNT_SECRET_ARN: !Ref GoogleServiceAccountSecretArn
@@ -228,19 +228,19 @@ Resources:
         - !Ref DepsLayerArn
       Policies:
         - DynamoDBCrudPolicy:
-            TableName: !Ref DesocupacoesTable
+            TableName: !Ref RegistrosTable
         - Statement:
             - Effect: Allow
               Action:
                 - secretsmanager:GetSecretValue
               Resource: !Ref GoogleServiceAccountSecretArn
       Events:
-        DeleteDesoc:
+        DeleteMovimentacao:
           Type: HttpApi
           Properties:
             ApiId: !Ref HttpApi
             Method: DELETE
-            Path: /desocupacoes/{id}
+            Path: /movimentacoes/{id}
 
   ExportXlsxFn:
     Type: AWS::Serverless::Function
@@ -255,7 +255,7 @@ Resources:
         - !Ref XlsxLayerArn
       Policies:
         - DynamoDBReadPolicy:
-            TableName: !Ref DesocupacoesTable
+            TableName: !Ref RegistrosTable
         - S3CrudPolicy:
             BucketName: !Ref ExportsBucket
       Events:
@@ -264,7 +264,7 @@ Resources:
           Properties:
             ApiId: !Ref HttpApi
             Method: GET
-            Path: /desocupacoes/export
+            Path: /movimentacoes/export
 
 Outputs:
   ApiUrl:
@@ -273,6 +273,6 @@ Outputs:
     Export:
       Name: !Sub ${AppName}-${Environment}-ApiUrl
   TableName:
-    Value: !Ref DesocupacoesTable
+    Value: !Ref RegistrosTable
   ExportsBucketName:
     Value: !Ref ExportsBucket

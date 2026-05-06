@@ -1,15 +1,15 @@
 import { env } from '../config/env';
-import type { Desocupacao, DesocupacaoInput, Imovel, ImovelInput } from '../types';
+import type { Imovel, ImovelInput, Movimentacao, MovimentacaoInput } from '../types';
 import { mockApi } from './api.mock';
 import { authService } from './auth';
 
 export interface ApiService {
-  createDesocupacao(input: DesocupacaoInput): Promise<Desocupacao>;
+  createMovimentacao(input: MovimentacaoInput): Promise<Movimentacao>;
   createImovel(input: ImovelInput): Promise<Imovel>;
-  listDesocupacoes(params?: { ano?: number; mes?: number }): Promise<Desocupacao[]>;
+  listMovimentacoes(params?: { ano?: number; mes?: number }): Promise<Movimentacao[]>;
   listImoveis(): Promise<Imovel[]>;
   exportXlsx(params?: { ano?: number; mes?: number }): Promise<{ url: string; filename: string }>;
-  removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }>;
+  removeMovimentacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }>;
 }
 
 export class HttpApi implements ApiService {
@@ -44,8 +44,8 @@ export class HttpApi implements ApiService {
     return (await res.json()) as T;
   }
 
-  createDesocupacao(input: DesocupacaoInput): Promise<Desocupacao> {
-    return this.request<Desocupacao>('/desocupacoes', {
+  createMovimentacao(input: MovimentacaoInput): Promise<Movimentacao> {
+    return this.request<Movimentacao>('/movimentacoes', {
       method: 'POST',
       body: JSON.stringify(input),
     });
@@ -58,12 +58,12 @@ export class HttpApi implements ApiService {
     });
   }
 
-  listDesocupacoes(params: { ano?: number; mes?: number } = {}): Promise<Desocupacao[]> {
+  listMovimentacoes(params: { ano?: number; mes?: number } = {}): Promise<Movimentacao[]> {
     const qs = new URLSearchParams();
     if (params.ano) qs.set('ano', String(params.ano));
     if (params.mes) qs.set('mes', String(params.mes));
     const suffix = qs.toString() ? `?${qs}` : '';
-    return this.request<Desocupacao[]>(`/desocupacoes${suffix}`);
+    return this.request<Movimentacao[]>(`/movimentacoes${suffix}`);
   }
 
   listImoveis(): Promise<Imovel[]> {
@@ -75,13 +75,13 @@ export class HttpApi implements ApiService {
     if (params.ano) qs.set('ano', String(params.ano));
     if (params.mes) qs.set('mes', String(params.mes));
     const suffix = qs.toString() ? `?${qs}` : '';
-    return this.request<{ url: string; filename: string }>(`/desocupacoes/export${suffix}`);
+    return this.request<{ url: string; filename: string }>(`/movimentacoes/export${suffix}`);
   }
 
-  removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }> {
+  removeMovimentacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }> {
     const qs = new URLSearchParams({ dataEvento });
     return this.request<{ id: string; status: 'DELETED' }>(
-      `/desocupacoes/${encodeURIComponent(id)}?${qs}`,
+      `/movimentacoes/${encodeURIComponent(id)}?${qs}`,
       { method: 'DELETE' },
     );
   }

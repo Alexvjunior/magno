@@ -4,12 +4,12 @@
 
 | Método | Rota                          | Auth |
 |--------|-------------------------------|------|
-| POST   | `/desocupacoes`               | JWT  |
+| POST   | `/movimentacoes`              | JWT  |
 | POST   | `/imoveis`                    | JWT  |
 | GET    | `/imoveis`                    | JWT  |
-| GET    | `/desocupacoes?ano=&mes=`     | JWT  |
-| DELETE | `/desocupacoes/{id}?dataEvento=YYYY-MM-DD` | JWT |
-| GET    | `/desocupacoes/export?ano=&mes=` | JWT |
+| GET    | `/movimentacoes?ano=&mes=`    | JWT  |
+| DELETE | `/movimentacoes/{id}?dataEvento=YYYY-MM-DD` | JWT |
+| GET    | `/movimentacoes/export?ano=&mes=` | JWT |
 
 ## Rodar testes
 

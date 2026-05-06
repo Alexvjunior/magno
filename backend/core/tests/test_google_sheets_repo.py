@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 from domain.models import Desocupacao, Imovel
 from infra import google_sheets_repo
-from infra.google_sheets_repo import desocupacao_to_sheet_row, imovel_to_sheet_row
+from infra.google_sheets_repo import movimentacao_to_sheet_row, imovel_to_sheet_row
 
 
 def _record() -> Desocupacao:
@@ -45,8 +45,8 @@ def _imovel_record() -> Imovel:
     )
 
 
-def test_desocupacao_to_sheet_row_matches_movimentacoes_order():
-    assert desocupacao_to_sheet_row(_record()) == [
+def test_movimentacao_to_sheet_row_matches_movimentacoes_order():
+    assert movimentacao_to_sheet_row(_record()) == [
         "Florianopolis",
         "Top Vision Residence",
         "1227",
@@ -64,7 +64,7 @@ def test_desocupacao_to_sheet_row_matches_movimentacoes_order():
     ]
 
 
-def test_delete_desocupacao_by_imovel_and_date_deletes_matching_sheet_row(monkeypatch):
+def test_delete_movimentacao_by_imovel_and_date_deletes_matching_sheet_row(monkeypatch):
     service = Mock()
     spreadsheets = service.spreadsheets.return_value
     spreadsheets.values.return_value.get.return_value.execute.return_value = {
@@ -84,7 +84,7 @@ def test_delete_desocupacao_by_imovel_and_date_deletes_matching_sheet_row(monkey
     monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
 
     assert (
-        google_sheets_repo.delete_desocupacao_by_imovel_and_date(
+        google_sheets_repo.delete_movimentacao_by_imovel_and_date(
             "FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
             date(2025, 7, 3),
         )
@@ -110,7 +110,7 @@ def test_delete_desocupacao_by_imovel_and_date_deletes_matching_sheet_row(monkey
     )
 
 
-def test_delete_desocupacao_by_imovel_and_date_returns_false_when_row_is_missing(monkeypatch):
+def test_delete_movimentacao_by_imovel_and_date_returns_false_when_row_is_missing(monkeypatch):
     service = Mock()
     spreadsheets = service.spreadsheets.return_value
     spreadsheets.values.return_value.get.return_value.execute.return_value = {
@@ -122,7 +122,7 @@ def test_delete_desocupacao_by_imovel_and_date_returns_false_when_row_is_missing
     monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
 
     assert (
-        google_sheets_repo.delete_desocupacao_by_imovel_and_date(
+        google_sheets_repo.delete_movimentacao_by_imovel_and_date(
             "FLORIANOPOLIS|TOP VISION RESIDENCE|1227",
             date(2025, 7, 3),
         )

@@ -51,7 +51,7 @@ export default function AppHeader({ title, onOpenCadastro, onOpenCadastroImoveis
               <div className="dropdown-menu" role="menu">
                 {onOpenCadastro && (
                   <button type="button" role="menuitem" onClick={openCadastro}>
-                    Desocupacoes
+                    Movimentacoes
                   </button>
                 )}
                 {onOpenCadastroImoveis && (

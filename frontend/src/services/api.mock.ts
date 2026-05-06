@@ -1,17 +1,17 @@
-import type { Desocupacao, DesocupacaoInput, Imovel, ImovelInput } from '../types';
+import type { Imovel, ImovelInput, Movimentacao, MovimentacaoInput } from '../types';
 import { buildIdImovel, normalizeImovelText } from './schemas';
 import { mockAuth } from './auth.mock';
 import type { ApiService } from './api';
 
-const STORAGE_KEY = 'claud.mock.desocupacoes';
+const STORAGE_KEY = 'claud.mock.movimentacoes';
 const IMOVEIS_STORAGE_KEY = 'claud.mock.imoveis';
 
-function loadAll(): Desocupacao[] {
+function loadAll(): Movimentacao[] {
   const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as Desocupacao[]) : [];
+  return raw ? (JSON.parse(raw) as Movimentacao[]) : [];
 }
 
-function saveAll(items: Desocupacao[]) {
+function saveAll(items: Movimentacao[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
@@ -29,7 +29,7 @@ function uuid(): string {
   return 'xxxxxxxxxxxx4xxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
 }
 
-function toCsv(items: Desocupacao[]): string {
+function toCsv(items: Movimentacao[]): string {
   const header = [
     'Cidade',
     'Edificio',
@@ -74,12 +74,12 @@ function toCsv(items: Desocupacao[]): string {
 }
 
 export const mockApi: ApiService = {
-  async createDesocupacao(input: DesocupacaoInput): Promise<Desocupacao> {
+  async createMovimentacao(input: MovimentacaoInput): Promise<Movimentacao> {
     const user = mockAuth.getCurrentUser();
     if (!user) throw new Error('Não autenticado');
     const imovel = loadAllImoveis().find((item) => item.idImovel === input.idImovel);
     if (!imovel) throw new Error('Imovel nao encontrado');
-    const item: Desocupacao = {
+    const item: Movimentacao = {
       id: uuid(),
       status: 'ACTIVE',
       ...input,
@@ -130,7 +130,7 @@ export const mockApi: ApiService = {
     return item;
   },
 
-  async listDesocupacoes(params: { ano?: number; mes?: number } = {}): Promise<Desocupacao[]> {
+  async listMovimentacoes(params: { ano?: number; mes?: number } = {}): Promise<Movimentacao[]> {
     const all = loadAll().filter((d) => d.status !== 'DELETED');
     if (!params.ano && !params.mes) return all;
     return all.filter((d) => {
@@ -145,19 +145,19 @@ export const mockApi: ApiService = {
   },
 
   async exportXlsx(params: { ano?: number; mes?: number } = {}): Promise<{ url: string; filename: string }> {
-    const items = await mockApi.listDesocupacoes(params);
+    const items = await mockApi.listMovimentacoes(params);
     const csv = toCsv(items);
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const stamp = new Date().toISOString().slice(0, 10);
-    const filename = `desocupacoes-${stamp}.csv`;
+    const filename = `movimentacoes-${stamp}.csv`;
     return { url, filename };
   },
 
-  async removeDesocupacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }> {
+  async removeMovimentacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }> {
     const all = loadAll();
     const index = all.findIndex((d) => d.id === id && d.dataEvento === dataEvento);
-    if (index === -1) throw new Error('Desocupacao nao encontrada');
+    if (index === -1) throw new Error('Movimentacao nao encontrada');
     all[index] = { ...all[index], status: 'DELETED' };
     saveAll(all);
     return { id, status: 'DELETED' };

@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildIdImovel,
-  desocupacaoSchema,
   imovelSchema,
   loginSchema,
+  movimentacaoSchema,
   newPasswordSchema,
   normalizeImovelText,
   removeAccents,
 } from './schemas';
 
-const goodDesocupacao = {
+const goodMovimentacao = {
   idImovel: 'FLORIANOPOLIS|TOP VISION RESIDENCE|1227',
   cidade: 'Florianopolis',
   edificio: 'Top Vision Residence',
@@ -47,15 +47,15 @@ describe('schemas', () => {
     expect(buildIdImovel('Balneario', 'Plaza', '326A')).toBe('');
   });
 
-  it('accepts valid desocupacao edge values and rejects invalid fields', () => {
-    expect(desocupacaoSchema.parse({ ...goodDesocupacao, mes: 12 })).toMatchObject({
+  it('accepts valid movimentacao edge values and rejects invalid fields', () => {
+    expect(movimentacaoSchema.parse({ ...goodMovimentacao, mes: 12 })).toMatchObject({
       mes: 12,
       valorAluguel: 0,
       diasVacancia: 0,
     });
 
-    const result = desocupacaoSchema.safeParse({
-      ...goodDesocupacao,
+    const result = movimentacaoSchema.safeParse({
+      ...goodMovimentacao,
       cidade: ' ',
       areaPrivativa: true,
       mes: 13,
@@ -68,8 +68,8 @@ describe('schemas', () => {
       expect(paths).toEqual(expect.arrayContaining(['cidade', 'areaPrivativa', 'mes', 'ano']));
     }
 
-    const dateOrder = desocupacaoSchema.safeParse({
-      ...goodDesocupacao,
+    const dateOrder = movimentacaoSchema.safeParse({
+      ...goodMovimentacao,
       dataEvento: '2023-01-01',
       dataInicioContrato: '2024-01-01',
     });
@@ -77,6 +77,46 @@ describe('schemas', () => {
     if (!dateOrder.success) {
       expect(dateOrder.error.issues.map((issue) => issue.path.join('.'))).toContain('dataEvento');
     }
+  });
+
+  it('requires conditional movimentacao fields by status evento', () => {
+    const desocupacao = movimentacaoSchema.safeParse({
+      ...goodMovimentacao,
+      dataInicioContrato: '',
+      valorAluguel: undefined,
+      diasVacancia: undefined,
+      motivoDesocupacao: '',
+    });
+    expect(desocupacao.success).toBe(false);
+    if (!desocupacao.success) {
+      expect(desocupacao.error.issues.map((issue) => issue.path.join('.'))).toEqual(
+        expect.arrayContaining(['dataInicioContrato', 'motivoDesocupacao']),
+      );
+    }
+
+    const locacao = movimentacaoSchema.safeParse({
+      ...goodMovimentacao,
+      statusEvento: 'Locacao',
+      dataInicioContrato: '',
+      valorAluguel: undefined,
+      diasVacancia: undefined,
+      motivoDesocupacao: '',
+    });
+    expect(locacao.success).toBe(false);
+    if (!locacao.success) {
+      expect(locacao.error.issues.map((issue) => issue.path.join('.'))).toEqual(
+        expect.arrayContaining(['valorAluguel', 'diasVacancia']),
+      );
+    }
+
+    expect(
+      movimentacaoSchema.safeParse({
+        ...goodMovimentacao,
+        statusEvento: 'Locacao',
+        dataInicioContrato: '',
+        motivoDesocupacao: '',
+      }).success,
+    ).toBe(true);
   });
 
   it('validates imovel contract and numeric bounds', () => {

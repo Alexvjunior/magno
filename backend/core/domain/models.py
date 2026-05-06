@@ -13,20 +13,20 @@ StatusEvento = Literal["Desocupacao", "Locacao"]
 
 
 @dataclass(frozen=True)
-class DesocupacaoInput:
+class MovimentacaoInput:
     id_imovel: str
     status_evento: StatusEvento
     data_evento: date
-    data_inicio_contrato: date
-    valor_aluguel: float
-    dias_vacancia: int
-    motivo_desocupacao: str
+    data_inicio_contrato: date | None
+    valor_aluguel: float | None
+    dias_vacancia: int | None
+    motivo_desocupacao: str | None
     mes: int
     ano: int
 
 
 @dataclass(frozen=True)
-class Desocupacao:
+class Movimentacao:
     id: str
     status: RecordStatus
     id_imovel: str
@@ -38,10 +38,10 @@ class Desocupacao:
     uso: Uso
     status_evento: str
     data_evento: date
-    data_inicio_contrato: date
-    valor_aluguel: float
-    dias_vacancia: int
-    motivo_desocupacao: str
+    data_inicio_contrato: date | None
+    valor_aluguel: float | None
+    dias_vacancia: int | None
+    motivo_desocupacao: str | None
     mes: int
     ano: int
     criado_por: str
@@ -50,7 +50,9 @@ class Desocupacao:
     def to_item(self) -> dict:
         d = asdict(self)
         d["data_evento"] = self.data_evento.isoformat()
-        d["data_inicio_contrato"] = self.data_inicio_contrato.isoformat()
+        d["data_inicio_contrato"] = (
+            self.data_inicio_contrato.isoformat() if self.data_inicio_contrato else None
+        )
         return d
 
     def to_api_dict(self) -> dict:
@@ -66,7 +68,9 @@ class Desocupacao:
             "uso": self.uso,
             "statusEvento": self.status_evento,
             "dataEvento": self.data_evento.isoformat(),
-            "dataInicioContrato": self.data_inicio_contrato.isoformat(),
+            "dataInicioContrato": (
+                self.data_inicio_contrato.isoformat() if self.data_inicio_contrato else None
+            ),
             "valorAluguel": self.valor_aluguel,
             "diasVacancia": self.dias_vacancia,
             "motivoDesocupacao": self.motivo_desocupacao,
@@ -75,6 +79,10 @@ class Desocupacao:
             "criadoPor": self.criado_por,
             "criadoEm": self.criado_em,
         }
+
+
+DesocupacaoInput = MovimentacaoInput
+Desocupacao = Movimentacao
 
 
 @dataclass(frozen=True)

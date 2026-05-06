@@ -1,4 +1,4 @@
-"""Google Sheets integration for desocupacao append operations."""
+"""Google Sheets integration for movimentacao append operations."""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,7 @@ import boto3
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-from domain.models import Desocupacao, Imovel
+from domain.models import Imovel, Movimentacao
 
 LOGGER = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ DEFAULT_SHEET_NAME = "MOVIMENTACOES"
 DEFAULT_IMOVES_SHEET_NAME = "IMOVEIS"
 
 
-def desocupacao_to_sheet_row(record: Desocupacao) -> list[Any]:
+def movimentacao_to_sheet_row(record: Movimentacao) -> list[Any]:
     return [
         record.cidade,
         record.edificio,
@@ -31,10 +31,10 @@ def desocupacao_to_sheet_row(record: Desocupacao) -> list[Any]:
         record.uso,
         record.status_evento,
         record.data_evento.strftime("%d/%m/%Y"),
-        record.data_inicio_contrato.strftime("%d/%m/%Y"),
-        record.valor_aluguel,
-        record.dias_vacancia,
-        record.motivo_desocupacao,
+        record.data_inicio_contrato.strftime("%d/%m/%Y") if record.data_inicio_contrato else "",
+        record.valor_aluguel if record.valor_aluguel is not None else "",
+        record.dias_vacancia if record.dias_vacancia is not None else "",
+        record.motivo_desocupacao or "",
         record.mes,
         record.ano,
     ]
@@ -90,10 +90,10 @@ def append_imovel(record: Imovel) -> dict[str, Any]:
     )
 
 
-def append_desocupacao(record: Desocupacao) -> dict[str, Any]:
+def append_movimentacao(record: Movimentacao) -> dict[str, Any]:
     spreadsheet_id = _spreadsheet_id()
     sheet_name = _sheet_name()
-    row = desocupacao_to_sheet_row(record)
+    row = movimentacao_to_sheet_row(record)
 
     existing = (
         _sheets_service()
@@ -106,7 +106,7 @@ def append_desocupacao(record: Desocupacao) -> dict[str, Any]:
     target_row = len(existing) + 1
     range_name = f"{sheet_name}!B{target_row}:O{target_row}"
 
-    LOGGER.info("Writing desocupacao %s to Google Sheets range %s", record.id, range_name)
+    LOGGER.info("Writing movimentacao %s to Google Sheets range %s", record.id, range_name)
     return (
         _sheets_service()
         .spreadsheets()
@@ -121,16 +121,16 @@ def append_desocupacao(record: Desocupacao) -> dict[str, Any]:
     )
 
 
-def delete_desocupacao_by_imovel_and_date(id_imovel: str, data_evento) -> bool:
+def delete_movimentacao_by_imovel_and_date(id_imovel: str, data_evento) -> bool:
     spreadsheet_id = _spreadsheet_id()
     sheet_name = _sheet_name()
     row_number = _find_row_number_by_imovel_and_date(spreadsheet_id, sheet_name, id_imovel, data_evento)
     if row_number is None:
-        LOGGER.info("Desocupacao %s %s not found in Google Sheets", id_imovel, data_evento)
+        LOGGER.info("Movimentacao %s %s not found in Google Sheets", id_imovel, data_evento)
         return False
 
     sheet_id = _sheet_id(spreadsheet_id, sheet_name)
-    LOGGER.info("Deleting desocupacao %s from Google Sheets row %s", id_imovel, row_number)
+    LOGGER.info("Deleting movimentacao %s from Google Sheets row %s", id_imovel, row_number)
     _sheets_service().spreadsheets().batchUpdate(
         spreadsheetId=spreadsheet_id,
         body={
@@ -151,10 +151,10 @@ def delete_desocupacao_by_imovel_and_date(id_imovel: str, data_evento) -> bool:
     return True
 
 
-def delete_desocupacao_by_id(record_id: str) -> bool:
+def delete_movimentacao_by_id(record_id: str) -> bool:
     row_number = _find_row_number_by_id(_spreadsheet_id(), _sheet_name(), record_id)
     if row_number is None:
-        LOGGER.info("Desocupacao %s not found in Google Sheets", record_id)
+        LOGGER.info("Movimentacao %s not found in Google Sheets", record_id)
         return False
     sheet_id = _sheet_id(_spreadsheet_id(), _sheet_name())
     _sheets_service().spreadsheets().batchUpdate(
@@ -175,6 +175,12 @@ def delete_desocupacao_by_id(record_id: str) -> bool:
         },
     ).execute()
     return True
+
+
+desocupacao_to_sheet_row = movimentacao_to_sheet_row
+append_desocupacao = append_movimentacao
+delete_desocupacao_by_imovel_and_date = delete_movimentacao_by_imovel_and_date
+delete_desocupacao_by_id = delete_movimentacao_by_id
 
 
 def _find_row_number_by_imovel_and_date(

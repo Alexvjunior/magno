@@ -9,7 +9,7 @@ async function login(page: Page) {
   await expect(page.getByText('user@example.com')).toBeVisible();
 }
 
-async function openCadastro(page: Page, name: 'Imoveis' | 'Desocupacoes') {
+async function openCadastro(page: Page, name: 'Imoveis' | 'Movimentacoes') {
   await page.getByRole('button', { name: 'Cadastros' }).click();
   await page.getByRole('menuitem', { name }).click();
 }
@@ -22,7 +22,7 @@ async function fillImovel(page: Page) {
   await page.getByLabel(/Tipologia/).selectOption('2Q');
 }
 
-async function fillDesocupacao(page: Page) {
+async function fillMovimentacao(page: Page) {
   await page.getByLabel(/Imovel cadastrado/).selectOption('FLORIANOPOLIS|PLAZA MEDITERRANEO|326');
   await page.getByLabel(/Status do Evento/).selectOption('Desocupacao');
   await page.getByLabel(/Data do Evento/).fill('2025-07-03');
@@ -48,7 +48,7 @@ test('redirects anonymous dashboard users to login', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible();
 });
 
-test('mock user can manage imoveis and desocupacoes', async ({ page }) => {
+test('mock user can manage imoveis and movimentacoes', async ({ page }) => {
   await login(page);
 
   await openCadastro(page, 'Imoveis');
@@ -63,20 +63,20 @@ test('mock user can manage imoveis and desocupacoes', async ({ page }) => {
   await expect(page.getByText('Este imovel ja foi cadastrado.')).toBeVisible();
   await page.getByRole('button', { name: 'Fechar' }).click();
 
-  await openCadastro(page, 'Desocupacoes');
-  await expect(page.getByRole('dialog', { name: 'Cadastro de desocupacoes' })).toBeVisible();
-  await fillDesocupacao(page);
+  await openCadastro(page, 'Movimentacoes');
+  await expect(page.getByRole('dialog', { name: 'Cadastro de movimentacoes' })).toBeVisible();
+  await fillMovimentacao(page);
   await page.getByRole('button', { name: 'Salvar' }).click();
-  await expect(page.getByText('Desocupacao cadastrada.')).toBeVisible();
+  await expect(page.getByText('Movimentacao cadastrada.')).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Plaza Mediterraneo', exact: true })).toBeVisible();
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: /Exportar/ }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^desocupacoes-\d{4}-\d{2}-\d{2}\.csv$/);
+  expect(download.suggestedFilename()).toMatch(/^movimentacoes-\d{4}-\d{2}-\d{2}\.csv$/);
 
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Remover' }).click();
-  await expect(page.getByText('Desocupacao removida.')).toBeVisible();
+  await expect(page.getByText('Movimentacao removida.')).toBeVisible();
   await expect(page.getByText('Nenhum registro ainda. Cadastre o primeiro acima.')).toBeVisible();
 });

@@ -1,6 +1,6 @@
-# claud - Cadastro de Desocupacoes
+# claud - Cadastro de Movimentacoes
 
-Aplicacao web serverless na AWS para cadastro de desocupacoes de imoveis.
+Aplicacao web serverless na AWS para cadastro de movimentacoes de imoveis.
 
 ## Estrutura
 

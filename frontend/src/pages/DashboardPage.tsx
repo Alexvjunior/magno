@@ -8,13 +8,13 @@ const DATA_STUDIO_REPORT_URL =
   'https://datastudio.google.com/embed/reporting/4b948a58-2496-4c8c-a2cb-7970823a2e63/page/N4agF';
 
 export default function DashboardPage() {
-  const [activeCadastro, setActiveCadastro] = useState<'desocupacoes' | 'imoveis' | null>(null);
+  const [activeCadastro, setActiveCadastro] = useState<'movimentacoes' | 'imoveis' | null>(null);
 
   return (
     <div className="dashboard-shell">
       <AppHeader
         title="Alugueis Magno Group"
-        onOpenCadastro={() => setActiveCadastro('desocupacoes')}
+        onOpenCadastro={() => setActiveCadastro('movimentacoes')}
         onOpenCadastroImoveis={() => setActiveCadastro('imoveis')}
       />
 
@@ -33,7 +33,7 @@ export default function DashboardPage() {
 
       {activeCadastro && (
         <Modal
-          title={activeCadastro === 'imoveis' ? 'Cadastro de imoveis' : 'Cadastro de desocupacoes'}
+          title={activeCadastro === 'imoveis' ? 'Cadastro de imoveis' : 'Cadastro de movimentacoes'}
           onClose={() => setActiveCadastro(null)}
         >
           {activeCadastro === 'imoveis' ? <CadastroImoveisContent embedded /> : <CadastroContent embedded />}

@@ -6,12 +6,12 @@ import { imovelFixture } from '../test/fixtures';
 import { renderWithRouter } from '../test/render';
 
 const apiServiceMock = vi.hoisted(() => ({
-  createDesocupacao: vi.fn(),
+  createMovimentacao: vi.fn(),
   createImovel: vi.fn(),
-  listDesocupacoes: vi.fn(),
+  listMovimentacoes: vi.fn(),
   listImoveis: vi.fn(),
   exportXlsx: vi.fn(),
-  removeDesocupacao: vi.fn(),
+  removeMovimentacao: vi.fn(),
 }));
 
 vi.mock('../services/api', () => ({

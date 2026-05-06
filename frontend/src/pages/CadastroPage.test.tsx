@@ -2,23 +2,23 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CadastroContent } from './CadastroPage';
-import { desocupacaoFixture, imovelFixture } from '../test/fixtures';
+import { imovelFixture, movimentacaoFixture } from '../test/fixtures';
 import { renderWithRouter } from '../test/render';
 
 const apiServiceMock = vi.hoisted(() => ({
-  createDesocupacao: vi.fn(),
+  createMovimentacao: vi.fn(),
   createImovel: vi.fn(),
-  listDesocupacoes: vi.fn(),
+  listMovimentacoes: vi.fn(),
   listImoveis: vi.fn(),
   exportXlsx: vi.fn(),
-  removeDesocupacao: vi.fn(),
+  removeMovimentacao: vi.fn(),
 }));
 
 vi.mock('../services/api', () => ({
   apiService: apiServiceMock,
 }));
 
-async function fillDesocupacaoForm(user: ReturnType<typeof userEvent.setup>) {
+async function fillMovimentacaoForm(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText(/Imovel cadastrado/), imovelFixture.idImovel);
   await user.selectOptions(screen.getByLabelText(/Status do Evento/), 'Desocupacao');
   await user.type(screen.getByLabelText(/Data do Evento/), '2025-07-03');
@@ -33,7 +33,7 @@ async function fillDesocupacaoForm(user: ReturnType<typeof userEvent.setup>) {
 describe('CadastroContent', () => {
   beforeEach(() => {
     Object.values(apiServiceMock).forEach((mock) => mock.mockReset());
-    apiServiceMock.listDesocupacoes.mockResolvedValue([]);
+    apiServiceMock.listMovimentacoes.mockResolvedValue([]);
     apiServiceMock.listImoveis.mockResolvedValue([]);
   });
 
@@ -45,23 +45,23 @@ describe('CadastroContent', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findAllByText(/Obrigat|Informe|M/)).not.toHaveLength(0);
-    expect(apiServiceMock.createDesocupacao).not.toHaveBeenCalled();
+    expect(apiServiceMock.createMovimentacao).not.toHaveBeenCalled();
   });
 
-  it('creates a desocupacao, resets the form and refreshes the latest list', async () => {
+  it('creates a movimentacao, resets the form and refreshes the latest list', async () => {
     const user = userEvent.setup();
-    apiServiceMock.listDesocupacoes.mockResolvedValueOnce([]).mockResolvedValueOnce([desocupacaoFixture]);
+    apiServiceMock.listMovimentacoes.mockResolvedValueOnce([]).mockResolvedValueOnce([movimentacaoFixture]);
     apiServiceMock.listImoveis.mockResolvedValue([imovelFixture]);
-    apiServiceMock.createDesocupacao.mockResolvedValue(desocupacaoFixture);
+    apiServiceMock.createMovimentacao.mockResolvedValue(movimentacaoFixture);
     renderWithRouter(<CadastroContent />);
     await screen.findByText('Nenhum registro ainda. Cadastre o primeiro acima.');
 
-    await fillDesocupacaoForm(user);
+    await fillMovimentacaoForm(user);
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
-    expect(await screen.findByText('Desocupacao cadastrada.')).toBeInTheDocument();
+    expect(await screen.findByText('Movimentacao cadastrada.')).toBeInTheDocument();
     expect(await screen.findByText('Plaza Mediterraneo')).toBeInTheDocument();
-    expect(apiServiceMock.createDesocupacao).toHaveBeenCalledWith(
+    expect(apiServiceMock.createMovimentacao).toHaveBeenCalledWith(
       expect.objectContaining({
         idImovel: imovelFixture.idImovel,
         cidade: imovelFixture.cidade,
@@ -76,13 +76,13 @@ describe('CadastroContent', () => {
 
   it('shows create and initial load errors', async () => {
     const user = userEvent.setup();
-    apiServiceMock.listDesocupacoes.mockRejectedValueOnce(new Error('Falha ao carregar'));
+    apiServiceMock.listMovimentacoes.mockRejectedValueOnce(new Error('Falha ao carregar'));
     apiServiceMock.listImoveis.mockResolvedValue([imovelFixture]);
-    apiServiceMock.createDesocupacao.mockRejectedValueOnce(new Error('Falha ao cadastrar'));
+    apiServiceMock.createMovimentacao.mockRejectedValueOnce(new Error('Falha ao cadastrar'));
     renderWithRouter(<CadastroContent />);
 
     expect(await screen.findByText('Falha ao carregar')).toBeInTheDocument();
-    await fillDesocupacaoForm(user);
+    await fillMovimentacaoForm(user);
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('Falha ao cadastrar')).toBeInTheDocument();
@@ -91,7 +91,7 @@ describe('CadastroContent', () => {
   it('exports by creating and clicking a download link', async () => {
     const user = userEvent.setup();
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    apiServiceMock.exportXlsx.mockResolvedValue({ url: 'https://signed', filename: 'desocupacoes.xlsx' });
+    apiServiceMock.exportXlsx.mockResolvedValue({ url: 'https://signed', filename: 'movimentacoes.xlsx' });
     renderWithRouter(<CadastroContent />);
     await screen.findByText('Nenhum registro ainda. Cadastre o primeiro acima.');
 
@@ -103,32 +103,32 @@ describe('CadastroContent', () => {
 
   it('removes only after confirmation and refreshes on success', async () => {
     const user = userEvent.setup();
-    apiServiceMock.listDesocupacoes
-      .mockResolvedValueOnce([desocupacaoFixture])
-      .mockResolvedValueOnce([desocupacaoFixture])
+    apiServiceMock.listMovimentacoes
+      .mockResolvedValueOnce([movimentacaoFixture])
+      .mockResolvedValueOnce([movimentacaoFixture])
       .mockResolvedValueOnce([]);
     apiServiceMock.listImoveis.mockResolvedValue([imovelFixture]);
-    apiServiceMock.removeDesocupacao.mockResolvedValue({ id: desocupacaoFixture.id, status: 'DELETED' });
+    apiServiceMock.removeMovimentacao.mockResolvedValue({ id: movimentacaoFixture.id, status: 'DELETED' });
     const confirm = vi.spyOn(window, 'confirm');
     renderWithRouter(<CadastroContent />);
     await screen.findByText('Plaza Mediterraneo');
 
     confirm.mockReturnValueOnce(false);
     await user.click(screen.getByRole('button', { name: 'Remover' }));
-    expect(apiServiceMock.removeDesocupacao).not.toHaveBeenCalled();
+    expect(apiServiceMock.removeMovimentacao).not.toHaveBeenCalled();
 
     confirm.mockReturnValueOnce(true);
     await user.click(screen.getByRole('button', { name: 'Remover' }));
 
-    expect(await screen.findByText('Desocupacao removida.')).toBeInTheDocument();
-    expect(apiServiceMock.removeDesocupacao).toHaveBeenCalledWith('desoc-1', '2025-07-03');
+    expect(await screen.findByText('Movimentacao removida.')).toBeInTheDocument();
+    expect(apiServiceMock.removeMovimentacao).toHaveBeenCalledWith('mov-1', '2025-07-03');
   });
 
   it('shows remove errors and clears the removing state', async () => {
     const user = userEvent.setup();
-    apiServiceMock.listDesocupacoes.mockResolvedValue([desocupacaoFixture]);
+    apiServiceMock.listMovimentacoes.mockResolvedValue([movimentacaoFixture]);
     apiServiceMock.listImoveis.mockResolvedValue([imovelFixture]);
-    apiServiceMock.removeDesocupacao.mockRejectedValue(new Error('Falha ao remover'));
+    apiServiceMock.removeMovimentacao.mockRejectedValue(new Error('Falha ao remover'));
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderWithRouter(<CadastroContent />);
     await screen.findByText('Plaza Mediterraneo');

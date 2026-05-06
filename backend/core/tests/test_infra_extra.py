@@ -45,7 +45,7 @@ def test_dynamo_put_writes_serialized_item(monkeypatch):
 
     table.put_item.assert_called_once()
     item = table.put_item.call_args.kwargs["Item"]
-    assert item["SK"] == "DESOC#2025-07-03#desoc-1"
+    assert item["SK"] == "MOV#2025-07-03#desoc-1"
     assert item["areaPrivativa"] == Decimal("68.78")
 
 
@@ -78,7 +78,7 @@ def test_dynamo_list_all_pages_yields_paginated_records(monkeypatch):
     table.query.side_effect = [
         {
             "Items": [dynamo_repo._to_item(_desocupacao())],
-            "LastEvaluatedKey": {"PK": "TENANT#default", "SK": "DESOC#1"},
+            "LastEvaluatedKey": {"PK": "TENANT#default", "SK": "MOV#1"},
         },
         {"Items": [dynamo_repo._to_item(_desocupacao())]},
     ]
@@ -89,7 +89,7 @@ def test_dynamo_list_all_pages_yields_paginated_records(monkeypatch):
     assert [item.id for item in out] == ["desoc-1", "desoc-1"]
     assert table.query.call_args_list[1].kwargs["ExclusiveStartKey"] == {
         "PK": "TENANT#default",
-        "SK": "DESOC#1",
+        "SK": "MOV#1",
     }
 
 
@@ -126,7 +126,7 @@ def test_dynamo_mark_deleted_propagates_non_conditional_client_error(monkeypatch
         dynamo_repo.mark_deleted("abc", date(2025, 7, 3))
 
 
-def test_google_sheets_append_desocupacao_appends_to_movimentacoes(monkeypatch):
+def test_google_sheets_append_movimentacao_appends_to_movimentacoes(monkeypatch):
     service = Mock()
     spreadsheets = service.spreadsheets.return_value
     spreadsheets.values.return_value.get.return_value.execute.return_value = {
@@ -137,7 +137,7 @@ def test_google_sheets_append_desocupacao_appends_to_movimentacoes(monkeypatch):
     monkeypatch.setattr(google_sheets_repo, "_sheet_name", lambda: "MOVIMENTACOES")
     monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
 
-    google_sheets_repo.append_desocupacao(_desocupacao())
+    google_sheets_repo.append_movimentacao(_desocupacao())
 
     spreadsheets.values.return_value.update.assert_called_once()
     assert spreadsheets.values.return_value.update.call_args.kwargs["range"] == "MOVIMENTACOES!B3:O3"
