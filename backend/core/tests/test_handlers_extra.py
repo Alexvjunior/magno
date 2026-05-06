@@ -131,15 +131,12 @@ def test_create_desocupacao_without_user_claim_uses_anonymous(monkeypatch):
 
 def test_create_imovel_invalid_payload_does_not_check_or_persist(monkeypatch):
     dynamo_exists = Mock()
-    sheets_exists = Mock()
     monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", dynamo_exists)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "imovel_exists_by_id", sheets_exists)
 
     response = create_imovel.handler({"body": json.dumps({"cidade": ""})}, None)
 
     assert response["statusCode"] == 422
     dynamo_exists.assert_not_called()
-    sheets_exists.assert_not_called()
 
 
 def test_create_imovel_returns_502_when_dynamo_duplicate_check_fails(monkeypatch):
@@ -157,25 +154,8 @@ def test_create_imovel_returns_502_when_dynamo_duplicate_check_fails(monkeypatch
     assert body["error"] == "dynamo down"
 
 
-def test_create_imovel_returns_502_when_sheets_duplicate_check_fails(monkeypatch):
-    monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", lambda *_: False)
-    monkeypatch.setattr(
-        create_imovel.google_sheets_repo,
-        "imovel_exists_by_id",
-        Mock(side_effect=RuntimeError("sheets down")),
-    )
-
-    response = create_imovel.handler({"body": json.dumps(_imovel_payload())}, None)
-    body = json.loads(response["body"])
-
-    assert response["statusCode"] == 502
-    assert body["message"] == "Falha ao verificar imovel no Google Sheets"
-    assert body["error"] == "sheets down"
-
-
 def test_create_imovel_propagates_unexpected_put_error(monkeypatch):
     monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", lambda *_: False)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "imovel_exists_by_id", lambda *_: False)
     monkeypatch.setattr(
         create_imovel.dynamo_repo,
         "put_imovel",

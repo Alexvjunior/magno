@@ -1,4 +1,4 @@
-"""POST /imoveis -- validates payload, persists to DynamoDB, then appends to IMOVEIS."""
+"""POST /imoveis -- validates payload and persists to DynamoDB."""
 from __future__ import annotations
 
 import logging
@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from domain.models import Imovel
 from domain.validators import ValidationError, validate_imovel
-from infra import dynamo_repo, google_sheets_repo
+from infra import dynamo_repo
 
 from ._common import get_user_sub, json_response, parse_body
 
@@ -44,20 +44,6 @@ def handler(event: dict, _context) -> dict:
             },
         )
 
-    try:
-        if google_sheets_repo.imovel_exists_by_id(validated.id_imovel):
-            return _duplicate_response(validated.id_imovel)
-    except Exception as exc:
-        LOGGER.exception("Failed to check imovel %s in Google Sheets", validated.id_imovel)
-        return json_response(
-            502,
-            {
-                "message": "Falha ao verificar imovel no Google Sheets",
-                "idImovel": validated.id_imovel,
-                "error": str(exc),
-            },
-        )
-
     record = Imovel(
         id_imovel=validated.id_imovel,
         cidade=validated.cidade,
@@ -75,19 +61,5 @@ def handler(event: dict, _context) -> dict:
         dynamo_repo.put_imovel(record)
     except dynamo_repo.DuplicateImovelError:
         return _duplicate_response(record.id_imovel)
-
-    try:
-        google_sheets_repo.append_imovel(record)
-    except Exception as exc:
-        LOGGER.exception("Failed to append imovel %s to Google Sheets", record.id_imovel)
-        return json_response(
-            502,
-            {
-                "message": "Imovel salvo no DynamoDB, mas falhou ao enviar para Google Sheets",
-                "dynamoSaved": True,
-                "idImovel": record.id_imovel,
-                "error": str(exc),
-            },
-        )
 
     return json_response(201, record.to_api_dict())

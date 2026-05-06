@@ -38,31 +38,9 @@ def _event(**overrides) -> dict:
 
 
 def test_handler_returns_409_when_imovel_already_exists_in_dynamo(monkeypatch):
-    sheets_exists = Mock()
     put = Mock()
-    append = Mock()
     monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", lambda *_: True)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "imovel_exists_by_id", sheets_exists)
     monkeypatch.setattr(create_imovel.dynamo_repo, "put_imovel", put)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "append_imovel", append)
-
-    response = create_imovel.handler(_event(), None)
-    body = json.loads(response["body"])
-
-    assert response["statusCode"] == 409
-    assert body["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
-    sheets_exists.assert_not_called()
-    put.assert_not_called()
-    append.assert_not_called()
-
-
-def test_handler_returns_409_when_imovel_already_exists_in_google_sheets(monkeypatch):
-    put = Mock()
-    append = Mock()
-    monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", lambda *_: False)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "imovel_exists_by_id", lambda *_: True)
-    monkeypatch.setattr(create_imovel.dynamo_repo, "put_imovel", put)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "append_imovel", append)
 
     response = create_imovel.handler(_event(), None)
     body = json.loads(response["body"])
@@ -70,32 +48,21 @@ def test_handler_returns_409_when_imovel_already_exists_in_google_sheets(monkeyp
     assert response["statusCode"] == 409
     assert body["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
     put.assert_not_called()
-    append.assert_not_called()
 
 
-def test_handler_saves_to_dynamo_then_appends_to_google_sheets(monkeypatch):
+def test_handler_saves_to_dynamo_only(monkeypatch):
     calls = []
 
     def dynamo_exists(_id_imovel):
         calls.append("dynamo_exists")
         return False
 
-    def sheets_exists(_id_imovel):
-        calls.append("sheets_exists")
-        return False
-
     def put(record):
         calls.append("put")
         assert record.id_imovel == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
 
-    def append(record):
-        calls.append("append")
-        assert record.id_imovel == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
-
     monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", dynamo_exists)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "imovel_exists_by_id", sheets_exists)
     monkeypatch.setattr(create_imovel.dynamo_repo, "put_imovel", put)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "append_imovel", append)
 
     response = create_imovel.handler(_event(), None)
     body = json.loads(response["body"])
@@ -105,39 +72,16 @@ def test_handler_saves_to_dynamo_then_appends_to_google_sheets(monkeypatch):
     assert body["cidade"] == "Florianopolis"
     assert body["edificio"] == "Plaza Mediterraneo"
     assert body["criadoPor"] == "user-1"
-    assert calls == ["dynamo_exists", "sheets_exists", "put", "append"]
+    assert calls == ["dynamo_exists", "put"]
 
 
 def test_handler_returns_409_when_dynamo_detects_duplicate(monkeypatch):
-    append = Mock()
     put = Mock(side_effect=create_imovel.dynamo_repo.DuplicateImovelError())
     monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", lambda *_: False)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "imovel_exists_by_id", lambda *_: False)
     monkeypatch.setattr(create_imovel.dynamo_repo, "put_imovel", put)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "append_imovel", append)
 
     response = create_imovel.handler(_event(), None)
     body = json.loads(response["body"])
 
     assert response["statusCode"] == 409
     assert body["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
-    append.assert_not_called()
-
-
-def test_handler_returns_502_when_google_sheets_append_fails_after_dynamo(monkeypatch):
-    put = Mock()
-    append = Mock(side_effect=RuntimeError("sheets unavailable"))
-    monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", lambda *_: False)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "imovel_exists_by_id", lambda *_: False)
-    monkeypatch.setattr(create_imovel.dynamo_repo, "put_imovel", put)
-    monkeypatch.setattr(create_imovel.google_sheets_repo, "append_imovel", append)
-
-    response = create_imovel.handler(_event(), None)
-    body = json.loads(response["body"])
-
-    assert response["statusCode"] == 502
-    assert body["dynamoSaved"] is True
-    assert body["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
-    assert body["error"] == "sheets unavailable"
-    put.assert_called_once()
-    append.assert_called_once()
