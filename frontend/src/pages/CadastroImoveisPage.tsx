@@ -7,7 +7,6 @@ import {
   imovelSchema,
   mobiliadoValues,
   normalizeImovelText,
-  statusAtualImovelValues,
   tipologiaImovelValues,
   type ImovelForm,
 } from '../services/schemas';
@@ -21,11 +20,6 @@ const emptyValues: ImovelForm = {
   tipologia: '1Q',
   uso: 'Residencial',
   mobiliado: 'Não',
-  statusAtual: 'Vago',
-  valorAluguelAtual: undefined as unknown as number,
-  dataUltimaLocacao: '',
-  dataUltimaDesocupacao: '',
-  diasVacanciaAtual: undefined as unknown as number,
 };
 
 type CadastroImoveisContentProps = {
@@ -161,73 +155,6 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
                 <span className="field-error">{errors.mobiliado.message}</span>
               )}
             </div>
-
-            <div className="field">
-              <label htmlFor="statusAtualImovel">Status atual *</label>
-              <select id="statusAtualImovel" {...register('statusAtual')}>
-                {statusAtualImovelValues.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-              {errors.statusAtual && (
-                <span className="field-error">{errors.statusAtual.message}</span>
-              )}
-            </div>
-
-            <div className="field">
-              <label htmlFor="valorAluguelAtualImovel">Valor do aluguel atual (R$) *</label>
-              <input
-                id="valorAluguelAtualImovel"
-                type="number"
-                step="0.01"
-                min={0}
-                {...register('valorAluguelAtual', { valueAsNumber: true })}
-              />
-              {errors.valorAluguelAtual && (
-                <span className="field-error">{errors.valorAluguelAtual.message}</span>
-              )}
-            </div>
-
-            <div className="field">
-              <label htmlFor="dataUltimaLocacaoImovel">Data da ultima locacao *</label>
-              <input
-                id="dataUltimaLocacaoImovel"
-                type="date"
-                {...register('dataUltimaLocacao')}
-              />
-              {errors.dataUltimaLocacao && (
-                <span className="field-error">{errors.dataUltimaLocacao.message}</span>
-              )}
-            </div>
-
-            <div className="field">
-              <label htmlFor="dataUltimaDesocupacaoImovel">Data da ultima desocupacao *</label>
-              <input
-                id="dataUltimaDesocupacaoImovel"
-                type="date"
-                {...register('dataUltimaDesocupacao')}
-              />
-              {errors.dataUltimaDesocupacao && (
-                <span className="field-error">{errors.dataUltimaDesocupacao.message}</span>
-              )}
-            </div>
-
-            <div className="field">
-              <label htmlFor="diasVacanciaAtualImovel">Dias de vacancia atual *</label>
-              <input
-                id="diasVacanciaAtualImovel"
-                type="number"
-                step="1"
-                min={0}
-                max={999}
-                {...register('diasVacanciaAtual', { valueAsNumber: true })}
-              />
-              {errors.diasVacanciaAtual && (
-                <span className="field-error">{errors.diasVacanciaAtual.message}</span>
-              )}
-            </div>
           </div>
 
           <div className="actions">
@@ -257,11 +184,6 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
                 <th>Tipologia</th>
                 <th>Uso</th>
                 <th>Mobiliado</th>
-                <th>Status</th>
-                <th>Aluguel</th>
-                <th>Ult. Locacao</th>
-                <th>Ult. Desocupacao</th>
-                <th>Dias Vac.</th>
               </tr>
             </thead>
             <tbody>
@@ -279,11 +201,6 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
                   <td>{item.tipologia}</td>
                   <td>{item.uso}</td>
                   <td>{item.mobiliado}</td>
-                  <td>{item.statusAtual}</td>
-                  <td>{item.valorAluguelAtual.toFixed(2)}</td>
-                  <td>{item.dataUltimaLocacao}</td>
-                  <td>{item.dataUltimaDesocupacao}</td>
-                  <td>{item.diasVacanciaAtual}</td>
                 </tr>
               ))}
             </tbody>

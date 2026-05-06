@@ -50,11 +50,6 @@ def imovel_to_sheet_row(record: Imovel) -> list[Any]:
         record.tipologia,
         record.uso,
         record.mobiliado,
-        record.status_atual,
-        record.valor_aluguel_atual,
-        record.data_ultima_locacao.strftime("%d/%m/%Y"),
-        record.data_ultima_desocupacao.strftime("%d/%m/%Y"),
-        record.dias_vacancia_atual,
     ]
 
 
@@ -76,7 +71,7 @@ def imovel_exists_by_id(id_imovel: str) -> bool:
 def append_imovel(record: Imovel) -> dict[str, Any]:
     spreadsheet_id = _spreadsheet_id()
     sheet_name = _imoveis_sheet_name()
-    range_name = f"{sheet_name}!A:M"
+    range_name = f"{sheet_name}!A:H"
     row = imovel_to_sheet_row(record)
 
     LOGGER.info("Appending imovel %s to Google Sheets range %s", record.id_imovel, range_name)
@@ -98,19 +93,28 @@ def append_imovel(record: Imovel) -> dict[str, Any]:
 def append_desocupacao(record: Desocupacao) -> dict[str, Any]:
     spreadsheet_id = _spreadsheet_id()
     sheet_name = _sheet_name()
-    range_name = f"{sheet_name}!B:O"
     row = desocupacao_to_sheet_row(record)
 
-    LOGGER.info("Appending desocupacao %s to Google Sheets range %s", record.id, range_name)
+    existing = (
+        _sheets_service()
+        .spreadsheets()
+        .values()
+        .get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!B:B")
+        .execute()
+        .get("values", [])
+    )
+    target_row = len(existing) + 1
+    range_name = f"{sheet_name}!B{target_row}:O{target_row}"
+
+    LOGGER.info("Writing desocupacao %s to Google Sheets range %s", record.id, range_name)
     return (
         _sheets_service()
         .spreadsheets()
         .values()
-        .append(
+        .update(
             spreadsheetId=spreadsheet_id,
             range=range_name,
             valueInputOption="USER_ENTERED",
-            insertDataOption="INSERT_ROWS",
             body={"values": [row]},
         )
         .execute()

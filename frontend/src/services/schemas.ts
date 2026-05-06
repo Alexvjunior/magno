@@ -129,23 +129,6 @@ export const imovelSchema = z.object({
   tipologia: z.enum(tipologiaImovelValues),
   uso: usoSchema,
   mobiliado: z.enum(mobiliadoValues),
-  statusAtual: z.enum(statusAtualImovelValues),
-  valorAluguelAtual: z
-    .number({ invalid_type_error: 'Informe um numero' })
-    .nonnegative('Nao pode ser negativo'),
-  dataUltimaLocacao: z
-    .string()
-    .min(1, 'Obrigatorio')
-    .regex(dateRegex, 'Data invalida'),
-  dataUltimaDesocupacao: z
-    .string()
-    .min(1, 'Obrigatorio')
-    .regex(dateRegex, 'Data invalida'),
-  diasVacanciaAtual: z
-    .number({ invalid_type_error: 'Informe um numero' })
-    .int('Use numero inteiro')
-    .min(0, 'Nao pode ser negativo')
-    .max(999, 'Maximo 3 digitos'),
 });
 
 export type ImovelForm = z.infer<typeof imovelSchema>;

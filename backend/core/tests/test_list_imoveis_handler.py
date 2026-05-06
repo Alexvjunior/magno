@@ -1,6 +1,5 @@
 import json
 import os
-from datetime import date
 
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 os.environ.setdefault("AWS_EC2_METADATA_DISABLED", "true")
@@ -19,11 +18,6 @@ def _record() -> Imovel:
         tipologia="2Q",
         uso="Residencial",
         mobiliado="Não",
-        status_atual="Vago",
-        valor_aluguel_atual=4300.0,
-        data_ultima_locacao=date(2025, 2, 10),
-        data_ultima_desocupacao=date(2025, 5, 1),
-        dias_vacancia_atual=12,
         criado_por="user-1",
         criado_em="2025-05-01T12:00:00Z",
     )

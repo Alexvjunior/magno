@@ -31,11 +31,6 @@ export const imovelFixture: Imovel = {
   tipologia: '2Q',
   uso: 'Residencial',
   mobiliado: 'N\u00e3o',
-  statusAtual: 'Vago',
-  valorAluguelAtual: 4300,
-  dataUltimaLocacao: '2025-02-10',
-  dataUltimaDesocupacao: '2025-05-01',
-  diasVacanciaAtual: 12,
   criadoPor: 'user-1',
   criadoEm: '2025-05-01T12:00:00Z',
 };

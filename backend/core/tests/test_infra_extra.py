@@ -129,15 +129,18 @@ def test_dynamo_mark_deleted_propagates_non_conditional_client_error(monkeypatch
 def test_google_sheets_append_desocupacao_appends_to_movimentacoes(monkeypatch):
     service = Mock()
     spreadsheets = service.spreadsheets.return_value
-    spreadsheets.values.return_value.append.return_value.execute.return_value = {"updates": {}}
+    spreadsheets.values.return_value.get.return_value.execute.return_value = {
+        "values": [["header"], ["existing"]]
+    }
+    spreadsheets.values.return_value.update.return_value.execute.return_value = {"updates": {}}
     monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
     monkeypatch.setattr(google_sheets_repo, "_sheet_name", lambda: "MOVIMENTACOES")
     monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
 
     google_sheets_repo.append_desocupacao(_desocupacao())
 
-    spreadsheets.values.return_value.append.assert_called_once()
-    assert spreadsheets.values.return_value.append.call_args.kwargs["range"] == "MOVIMENTACOES!B:O"
+    spreadsheets.values.return_value.update.assert_called_once()
+    assert spreadsheets.values.return_value.update.call_args.kwargs["range"] == "MOVIMENTACOES!B3:O3"
 
 
 def test_google_sheets_sheet_id_raises_when_tab_is_missing(monkeypatch):

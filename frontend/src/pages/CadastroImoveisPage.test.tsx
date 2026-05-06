@@ -24,10 +24,6 @@ async function fillImovelForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/Numero do apto/), '326');
   await user.type(screen.getByLabelText(/Area privativa/), '72.5');
   await user.selectOptions(screen.getByLabelText(/Tipologia/), '2Q');
-  await user.type(screen.getByLabelText(/Valor do aluguel atual/), '4300');
-  await user.type(screen.getByLabelText(/Data da ultima locacao/), '2025-02-10');
-  await user.type(screen.getByLabelText(/Data da ultima desocupacao/), '2025-05-01');
-  await user.type(screen.getByLabelText(/Dias de vacancia atual/), '12');
 }
 
 describe('CadastroImoveisContent', () => {
@@ -87,7 +83,6 @@ describe('CadastroImoveisContent', () => {
 
     expect(await screen.findByText('Plaza Mediterraneo')).toBeInTheDocument();
     expect(screen.getByText('72.50')).toBeInTheDocument();
-    expect(screen.getByText('4300.00')).toBeInTheDocument();
     expect(screen.getByTitle(imovelFixture.idImovel)).toBeInTheDocument();
   });
 });

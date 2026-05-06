@@ -22,11 +22,6 @@ def _imovel() -> Imovel:
         tipologia="2Q",
         uso="Residencial",
         mobiliado="Não",
-        status_atual="Vago",
-        valor_aluguel_atual=4300.0,
-        data_ultima_locacao=date(2025, 2, 10),
-        data_ultima_desocupacao=date(2025, 5, 1),
-        dias_vacancia_atual=12,
         criado_por="user-1",
         criado_em="2025-05-01T12:00:00Z",
     )
@@ -137,9 +132,9 @@ def test_to_imovel_item_uses_imovel_entity_key():
     assert item["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
     assert item["cidade"] == "Florianopolis"
     assert item["areaPrivativa"] == Decimal("72.5")
-    assert item["valorAluguelAtual"] == Decimal("4300.0")
-    assert item["dataUltimaLocacao"] == "2025-02-10"
-    assert item["dataUltimaDesocupacao"] == "2025-05-01"
+    assert "valorAluguelAtual" not in item
+    assert "dataUltimaLocacao" not in item
+    assert "dataUltimaDesocupacao" not in item
 
 
 def test_from_imovel_item_maps_current_contract():
@@ -153,11 +148,6 @@ def test_from_imovel_item_maps_current_contract():
     assert out.tipologia == "2Q"
     assert out.uso == "Residencial"
     assert out.mobiliado == _imovel().mobiliado
-    assert out.status_atual == "Vago"
-    assert out.valor_aluguel_atual == 4300.0
-    assert out.data_ultima_locacao.isoformat() == "2025-02-10"
-    assert out.data_ultima_desocupacao.isoformat() == "2025-05-01"
-    assert out.dias_vacancia_atual == 12
     assert out.criado_por == "user-1"
     assert out.to_api_dict()["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
 

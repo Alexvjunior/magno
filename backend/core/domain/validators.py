@@ -174,43 +174,6 @@ def validate_imovel(payload: dict[str, Any]) -> ImovelInput:
     else:
         mobiliado = mobiliado_raw
 
-    status_atual_raw = payload.get("statusAtual")
-    if status_atual_raw not in ALLOWED_STATUS_ATUAL_IMOVEL:
-        errors["statusAtual"] = f"Use um de: {', '.join(sorted(ALLOWED_STATUS_ATUAL_IMOVEL))}"
-        status_atual = None
-    else:
-        status_atual = status_atual_raw
-
-    valor_aluguel_atual = _number(
-        payload.get("valorAluguelAtual"),
-        "valorAluguelAtual",
-        errors,
-    )
-    if valor_aluguel_atual is not None and valor_aluguel_atual < 0:
-        errors["valorAluguelAtual"] = "Nao pode ser negativo"
-        valor_aluguel_atual = None
-
-    data_ultima_locacao = _parse_date(
-        payload.get("dataUltimaLocacao"),
-        "dataUltimaLocacao",
-        errors,
-    )
-    data_ultima_desocupacao = _parse_date(
-        payload.get("dataUltimaDesocupacao"),
-        "dataUltimaDesocupacao",
-        errors,
-    )
-
-    dias_vacancia_atual = _number(
-        payload.get("diasVacanciaAtual"),
-        "diasVacanciaAtual",
-        errors,
-        integer=True,
-    )
-    if dias_vacancia_atual is not None and not (0 <= dias_vacancia_atual <= 999):
-        errors["diasVacanciaAtual"] = "Use numero entre 0 e 999"
-        dias_vacancia_atual = None
-
     if errors:
         raise ValidationError(errors)
 
@@ -225,9 +188,4 @@ def validate_imovel(payload: dict[str, Any]) -> ImovelInput:
         tipologia=tipologia,  # type: ignore[arg-type]
         uso=uso,  # type: ignore[arg-type]
         mobiliado=mobiliado,  # type: ignore[arg-type]
-        status_atual=status_atual,  # type: ignore[arg-type]
-        valor_aluguel_atual=valor_aluguel_atual,  # type: ignore[arg-type]
-        data_ultima_locacao=data_ultima_locacao,  # type: ignore[arg-type]
-        data_ultima_desocupacao=data_ultima_desocupacao,  # type: ignore[arg-type]
-        dias_vacancia_atual=int(dias_vacancia_atual),  # type: ignore[arg-type]
     )

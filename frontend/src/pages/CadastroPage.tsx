@@ -35,7 +35,6 @@ function valuesFromImovel(imovel: Imovel): DesocupacaoForm {
     areaPrivativa: imovel.areaPrivativa,
     tipologia: imovel.tipologia,
     uso: imovel.uso,
-    valorAluguel: imovel.valorAluguelAtual,
   };
 }
 

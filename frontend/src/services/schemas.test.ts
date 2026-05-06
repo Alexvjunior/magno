@@ -35,11 +35,6 @@ const goodImovel = {
   tipologia: '2Q',
   uso: 'Residencial',
   mobiliado: 'Sim',
-  statusAtual: 'Vago',
-  valorAluguelAtual: 0,
-  dataUltimaLocacao: '2025-02-10',
-  dataUltimaDesocupacao: '2025-05-01',
-  diasVacanciaAtual: 0,
 } as const;
 
 describe('schemas', () => {
@@ -85,26 +80,21 @@ describe('schemas', () => {
   });
 
   it('validates imovel contract and numeric bounds', () => {
-    expect(imovelSchema.parse({ ...goodImovel, diasVacanciaAtual: 999 })).toMatchObject({
+    expect(imovelSchema.parse(goodImovel)).toMatchObject({
       numeroApto: '326',
-      valorAluguelAtual: 0,
-      diasVacanciaAtual: 999,
+      areaPrivativa: 72.5,
     });
 
     const result = imovelSchema.safeParse({
       ...goodImovel,
       numeroApto: '326A',
       areaPrivativa: 0,
-      valorAluguelAtual: -1,
-      diasVacanciaAtual: 1000,
     });
 
     expect(result.success).toBe(false);
     if (!result.success) {
       const paths = result.error.issues.map((issue) => issue.path.join('.'));
-      expect(paths).toEqual(
-        expect.arrayContaining(['numeroApto', 'areaPrivativa', 'valorAluguelAtual', 'diasVacanciaAtual']),
-      );
+      expect(paths).toEqual(expect.arrayContaining(['numeroApto', 'areaPrivativa']));
     }
   });
 

@@ -40,11 +40,6 @@ def _imovel_record() -> Imovel:
         tipologia="2Q",
         uso="Residencial",
         mobiliado="Não",
-        status_atual="Vago",
-        valor_aluguel_atual=4300.0,
-        data_ultima_locacao=date(2025, 2, 10),
-        data_ultima_desocupacao=date(2025, 5, 1),
-        dias_vacancia_atual=12,
         criado_por="user-1",
         criado_em="2025-05-01T12:00:00Z",
     )
@@ -146,11 +141,6 @@ def test_imovel_to_sheet_row_matches_imoves_order():
         "2Q",
         "Residencial",
         "Não",
-        "Vago",
-        4300.0,
-        "10/02/2025",
-        "01/05/2025",
-        12,
     ]
 
 
@@ -189,7 +179,7 @@ def test_append_imovel_appends_to_imoves(monkeypatch):
 
     spreadsheets.values.return_value.append.assert_called_once_with(
         spreadsheetId="spreadsheet-1",
-        range="IMOVEIS!A:M",
+        range="IMOVEIS!A:H",
         valueInputOption="USER_ENTERED",
         insertDataOption="INSERT_ROWS",
         body={"values": [imovel_to_sheet_row(_imovel_record())]},

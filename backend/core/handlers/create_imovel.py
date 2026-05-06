@@ -67,11 +67,6 @@ def handler(event: dict, _context) -> dict:
         tipologia=validated.tipologia,
         uso=validated.uso,
         mobiliado=validated.mobiliado,
-        status_atual=validated.status_atual,
-        valor_aluguel_atual=validated.valor_aluguel_atual,
-        data_ultima_locacao=validated.data_ultima_locacao,
-        data_ultima_desocupacao=validated.data_ultima_desocupacao,
-        dias_vacancia_atual=validated.dias_vacancia_atual,
         criado_por=get_user_sub(event),
         criado_em=datetime.now(timezone.utc).isoformat(),
     )

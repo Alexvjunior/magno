@@ -85,11 +85,6 @@ def _to_imovel_item(imovel: Imovel) -> dict:
         "tipologia": imovel.tipologia,
         "uso": imovel.uso,
         "mobiliado": imovel.mobiliado,
-        "statusAtual": imovel.status_atual,
-        "valorAluguelAtual": _to_decimal(imovel.valor_aluguel_atual),
-        "dataUltimaLocacao": imovel.data_ultima_locacao.isoformat(),
-        "dataUltimaDesocupacao": imovel.data_ultima_desocupacao.isoformat(),
-        "diasVacanciaAtual": imovel.dias_vacancia_atual,
         "criadoPor": imovel.criado_por,
         "criadoEm": imovel.criado_em,
     }
@@ -199,11 +194,6 @@ def _from_imovel_item(item: dict) -> Imovel:
         tipologia=_text(item.get("tipologia"), "Studio"),  # type: ignore[arg-type]
         uso=_uso(item.get("uso")),  # type: ignore[arg-type]
         mobiliado=_text(item.get("mobiliado"), "Não"),  # type: ignore[arg-type]
-        status_atual=_text(item.get("statusAtual"), "Vago"),  # type: ignore[arg-type]
-        valor_aluguel_atual=_float(item.get("valorAluguelAtual")),
-        data_ultima_locacao=_date(item.get("dataUltimaLocacao")),
-        data_ultima_desocupacao=_date(item.get("dataUltimaDesocupacao")),
-        dias_vacancia_atual=_int(item.get("diasVacanciaAtual")),
         criado_por=_text(item.get("criadoPor"), "legacy"),
         criado_em=_text(item.get("criadoEm"), "1970-01-01T00:00:00Z"),
     )

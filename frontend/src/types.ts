@@ -38,11 +38,6 @@ export interface ImovelInput {
   tipologia: TipologiaImovel;
   uso: Uso;
   mobiliado: Mobiliado;
-  statusAtual: StatusAtualImovel;
-  valorAluguelAtual: number;
-  dataUltimaLocacao: string;       // ISO yyyy-mm-dd
-  dataUltimaDesocupacao: string;   // ISO yyyy-mm-dd
-  diasVacanciaAtual: number;
 }
 
 export interface Imovel extends ImovelInput {

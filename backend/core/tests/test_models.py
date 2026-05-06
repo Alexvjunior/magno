@@ -37,11 +37,6 @@ def _imovel() -> Imovel:
         tipologia="2Q",
         uso="Residencial",
         mobiliado="Não",
-        status_atual="Vago",
-        valor_aluguel_atual=4300,
-        data_ultima_locacao=date(2025, 2, 10),
-        data_ultima_desocupacao=date(2025, 5, 1),
-        dias_vacancia_atual=12,
         criado_por="user-1",
         criado_em="2025-05-01T12:00:00Z",
     )
@@ -61,8 +56,8 @@ def test_desocupacao_to_item_and_api_dict_format_dates_and_field_names():
 def test_imovel_to_item_and_api_dict_format_dates_and_field_names():
     record = _imovel()
 
-    assert record.to_item()["data_ultima_locacao"] == "2025-02-10"
-    assert record.to_item()["data_ultima_desocupacao"] == "2025-05-01"
+    assert record.to_item()["id_imovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
+    assert "data_ultima_locacao" not in record.to_item()
     assert record.to_api_dict()["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
-    assert record.to_api_dict()["dataUltimaLocacao"] == "2025-02-10"
+    assert "dataUltimaLocacao" not in record.to_api_dict()
     assert "id_imovel" not in record.to_api_dict()

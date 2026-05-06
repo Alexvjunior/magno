@@ -52,11 +52,6 @@ def _imovel() -> Imovel:
         tipologia="2Q",
         uso="Residencial",
         mobiliado="NÃ£o",
-        status_atual="Vago",
-        valor_aluguel_atual=2500.5,
-        data_ultima_locacao=date(2023, 10, 24),
-        data_ultima_desocupacao=date(2025, 7, 3),
-        dias_vacancia_atual=12,
         criado_por="user-1",
         criado_em="2025-07-03T12:00:00Z",
     )
@@ -93,11 +88,6 @@ def _imovel_payload(**overrides):
         "tipologia": "2Q",
         "uso": "Residencial",
         "mobiliado": "Não",
-        "statusAtual": "Vago",
-        "valorAluguelAtual": 4300.0,
-        "dataUltimaLocacao": "2025-02-10",
-        "dataUltimaDesocupacao": "2025-05-01",
-        "diasVacanciaAtual": 12,
     }
     payload.update(overrides)
     return payload

@@ -34,11 +34,6 @@ def _good_imovel_payload(**overrides):
         "tipologia": "2Q",
         "uso": "Residencial",
         "mobiliado": "Sim",
-        "statusAtual": "Vago",
-        "valorAluguelAtual": 4300.0,
-        "dataUltimaLocacao": "2025-02-10",
-        "dataUltimaDesocupacao": "2025-05-01",
-        "diasVacanciaAtual": 12,
     }
     base.update(overrides)
     return base
@@ -112,8 +107,6 @@ def test_validates_imovel_payload_normalizes_text_and_builds_id():
     assert out.numero_apto == "326"
     assert out.tipologia == "2Q"
     assert out.mobiliado == "Sim"
-    assert out.status_atual == "Vago"
-    assert out.dias_vacancia_atual == 12
 
 
 def test_rejects_imovel_numero_apto_with_non_digits():
@@ -129,30 +122,18 @@ def test_rejects_imovel_invalid_enums():
                 tipologia="5Q",
                 uso="Industrial",
                 mobiliado="Nao",
-                statusAtual="Reservado",
             )
         )
     assert "tipologia" in ei.value.errors
     assert "uso" in ei.value.errors
     assert "mobiliado" in ei.value.errors
-    assert "statusAtual" in ei.value.errors
 
 
-def test_rejects_imovel_dias_vacancia_atual_over_three_digits():
-    with pytest.raises(ValidationError) as ei:
-        validate_imovel(_good_imovel_payload(diasVacanciaAtual=1000))
-    assert "diasVacanciaAtual" in ei.value.errors
-
-
-def test_rejects_imovel_invalid_dates_and_numbers():
+def test_rejects_imovel_invalid_numbers():
     with pytest.raises(ValidationError) as ei:
         validate_imovel(
             _good_imovel_payload(
                 areaPrivativa=0,
-                valorAluguelAtual=-1,
-                dataUltimaLocacao="10/02/2025",
             )
         )
     assert "areaPrivativa" in ei.value.errors
-    assert "valorAluguelAtual" in ei.value.errors
-    assert "dataUltimaLocacao" in ei.value.errors
