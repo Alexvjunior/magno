@@ -20,10 +20,6 @@ async function fillImovel(page: Page) {
   await page.getByLabel(/Numero do apto/).fill('326');
   await page.getByLabel(/Area privativa/).fill('72.5');
   await page.getByLabel(/Tipologia/).selectOption('2Q');
-  await page.getByLabel(/Valor do aluguel atual/).fill('4300');
-  await page.getByLabel(/Data da ultima locacao/).fill('2025-02-10');
-  await page.getByLabel(/Data da ultima desocupacao/).fill('2025-05-01');
-  await page.getByLabel(/Dias de vacancia atual/).fill('12');
 }
 
 async function fillDesocupacao(page: Page) {
