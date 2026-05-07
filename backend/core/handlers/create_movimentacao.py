@@ -63,7 +63,7 @@ def handler(event: dict, _context) -> dict:
                         "error": str(exc),
                     },
                 )
-            latest_is_desocupacao = sheet_status == "Desocupacao"
+            latest_is_desocupacao = sheet_status in (None, "Desocupacao")
         else:
             latest_is_desocupacao = latest.status_evento == "Desocupacao"
 

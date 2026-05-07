@@ -91,7 +91,7 @@ export const mockApi: ApiService = {
     if (!imovel) throw new Error('Imovel nao encontrado');
     if (input.statusEvento === 'Locacao') {
       const latest = latestMovimentacaoForImovel(input.idImovel);
-      if (latest?.statusEvento !== 'Desocupacao') {
+      if (latest && latest.statusEvento !== 'Desocupacao') {
         throw new Error('O imovel nao tem como ultimo registro uma desocupacao.');
       }
     }

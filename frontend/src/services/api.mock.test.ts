@@ -58,7 +58,7 @@ describe('mockApi', () => {
     expect(await mockApi.listMovimentacoes()).toHaveLength(0);
   });
 
-  it('requires a previous desocupacao before creating a locacao', async () => {
+  it('allows locacao without previous records or after desocupacao, but rejects after locacao', async () => {
     await mockApi.createImovel(imovelInput);
     const locacaoInput = {
       ...movimentacaoInput,
@@ -70,12 +70,23 @@ describe('mockApi', () => {
       motivoDesocupacao: null,
     } as const;
 
-    await expect(mockApi.createMovimentacao(locacaoInput)).rejects.toThrow(
+    await expect(mockApi.createMovimentacao(locacaoInput)).resolves.toMatchObject({
+      statusEvento: 'Locacao',
+      valorAluguel: 3000,
+      diasVacancia: 1,
+      dataInicioContrato: null,
+      motivoDesocupacao: null,
+    });
+    await expect(
+      mockApi.createMovimentacao({ ...locacaoInput, dataEvento: '2025-07-05' }),
+    ).rejects.toThrow(
       'O imovel nao tem como ultimo registro uma desocupacao.',
     );
 
-    await mockApi.createMovimentacao(movimentacaoInput);
-    await expect(mockApi.createMovimentacao(locacaoInput)).resolves.toMatchObject({
+    await mockApi.createMovimentacao({ ...movimentacaoInput, dataEvento: '2025-07-06' });
+    await expect(
+      mockApi.createMovimentacao({ ...locacaoInput, dataEvento: '2025-07-07' }),
+    ).resolves.toMatchObject({
       statusEvento: 'Locacao',
       valorAluguel: 3000,
       diasVacancia: 1,

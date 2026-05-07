@@ -242,7 +242,46 @@ def test_create_locacao_falls_back_to_google_sheets_when_dynamo_has_no_latest(mo
     append.assert_called_once()
 
 
-def test_create_locacao_rejects_when_neither_dynamo_nor_sheets_has_desocupacao(monkeypatch):
+def test_create_locacao_accepts_when_neither_dynamo_nor_sheets_has_records(monkeypatch):
+    put = Mock()
+    append = Mock()
+    monkeypatch.setattr(create_movimentacao.uuid, "uuid4", lambda: "uuid-123")
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(
+        create_movimentacao.dynamo_repo,
+        "latest_movimentacao_for_imovel",
+        Mock(return_value=None),
+    )
+    monkeypatch.setattr(
+        create_movimentacao.google_sheets_repo,
+        "latest_status_evento_by_imovel",
+        Mock(return_value=None),
+    )
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
+
+    response = create_movimentacao.handler(
+        {
+            "body": json.dumps(
+                _desocupacao_payload(
+                    statusEvento="Locacao",
+                    dataEvento="2025-07-04",
+                    dataInicioContrato="",
+                    valorAluguel=3000,
+                    diasVacancia=1,
+                    motivoDesocupacao="",
+                )
+            )
+        },
+        None,
+    )
+
+    assert response["statusCode"] == 201
+    put.assert_called_once()
+    append.assert_called_once()
+
+
+def test_create_locacao_rejects_when_google_sheets_latest_is_not_desocupacao(monkeypatch):
     put = Mock()
     append = Mock()
     monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
@@ -254,7 +293,7 @@ def test_create_locacao_rejects_when_neither_dynamo_nor_sheets_has_desocupacao(m
     monkeypatch.setattr(
         create_movimentacao.google_sheets_repo,
         "latest_status_evento_by_imovel",
-        Mock(return_value=None),
+        Mock(return_value="Locacao"),
     )
     monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
     monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
