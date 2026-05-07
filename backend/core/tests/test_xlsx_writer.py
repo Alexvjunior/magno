@@ -23,7 +23,7 @@ def _record(year=2025, month=7, day=3) -> Desocupacao:
         data_inicio_contrato=date(2023, 10, 24),
         valor_aluguel=2500.50,
         dias_vacancia=12,
-        motivo_desocupacao="Mudou de estado",
+        motivo_desocupacao="Mudança geográfica",
         mes=month,
         ano=year,
         criado_por="user-1",

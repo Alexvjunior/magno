@@ -1,5 +1,6 @@
 import json
 import os
+from dataclasses import replace
 from datetime import date, datetime, timezone
 from unittest.mock import Mock
 
@@ -34,7 +35,7 @@ def _desocupacao() -> Desocupacao:
         data_inicio_contrato=date(2023, 10, 24),
         valor_aluguel=2500.5,
         dias_vacancia=12,
-        motivo_desocupacao="Mudou de estado",
+        motivo_desocupacao="Mudança geográfica",
         mes=7,
         ano=2025,
         criado_por="user-1",
@@ -71,7 +72,7 @@ def _desocupacao_payload(**overrides):
         "dataInicioContrato": "2023-10-24",
         "valorAluguel": 2500.5,
         "diasVacancia": 12,
-        "motivoDesocupacao": "Mudou de estado",
+        "motivoDesocupacao": "Mudança geográfica",
         "mes": 7,
         "ano": 2025,
     }
@@ -127,6 +128,233 @@ def test_create_movimentacao_without_user_claim_uses_anonymous(monkeypatch):
 
     assert response["statusCode"] == 201
     assert json.loads(response["body"])["criadoPor"] == "anonymous"
+
+
+def test_create_locacao_accepts_when_latest_dynamo_record_is_desocupacao(monkeypatch):
+    put = Mock()
+    append = Mock()
+    latest = Mock(return_value=_desocupacao())
+    sheets_latest = Mock()
+    monkeypatch.setattr(create_movimentacao.uuid, "uuid4", lambda: "uuid-123")
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "latest_movimentacao_for_imovel", latest)
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "latest_status_evento_by_imovel", sheets_latest)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
+
+    response = create_movimentacao.handler(
+        {
+            "body": json.dumps(
+                _desocupacao_payload(
+                    statusEvento="Locacao",
+                    dataEvento="2025-07-04",
+                    dataInicioContrato="not-a-date",
+                    valorAluguel=3000,
+                    diasVacancia=1,
+                    motivoDesocupacao="Texto ignorado",
+                )
+            )
+        },
+        None,
+    )
+
+    assert response["statusCode"] == 201
+    body = json.loads(response["body"])
+    assert body["statusEvento"] == "Locacao"
+    assert body["dataInicioContrato"] is None
+    assert body["motivoDesocupacao"] is None
+    latest.assert_called_once_with("FLORIANOPOLIS|TOP VISION RESIDENCE|1227")
+    sheets_latest.assert_not_called()
+    put.assert_called_once()
+    append.assert_called_once()
+
+
+def test_create_locacao_rejects_when_latest_dynamo_record_is_not_desocupacao(monkeypatch):
+    put = Mock()
+    append = Mock()
+    latest = replace(_desocupacao(), status_evento="Locacao")
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(
+        create_movimentacao.dynamo_repo,
+        "latest_movimentacao_for_imovel",
+        Mock(return_value=latest),
+    )
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
+
+    response = create_movimentacao.handler(
+        {
+            "body": json.dumps(
+                _desocupacao_payload(
+                    statusEvento="Locacao",
+                    dataEvento="2025-07-04",
+                    dataInicioContrato="",
+                    valorAluguel=3000,
+                    diasVacancia=1,
+                    motivoDesocupacao="",
+                )
+            )
+        },
+        None,
+    )
+    body = json.loads(response["body"])
+
+    assert response["statusCode"] == 409
+    assert body["message"] == "O imovel nao tem como ultimo registro uma desocupacao."
+    put.assert_not_called()
+    append.assert_not_called()
+
+
+def test_create_locacao_falls_back_to_google_sheets_when_dynamo_has_no_latest(monkeypatch):
+    put = Mock()
+    append = Mock()
+    sheets_latest = Mock(return_value="Desocupacao")
+    monkeypatch.setattr(create_movimentacao.uuid, "uuid4", lambda: "uuid-123")
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(
+        create_movimentacao.dynamo_repo,
+        "latest_movimentacao_for_imovel",
+        Mock(return_value=None),
+    )
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "latest_status_evento_by_imovel", sheets_latest)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
+
+    response = create_movimentacao.handler(
+        {
+            "body": json.dumps(
+                _desocupacao_payload(
+                    statusEvento="Locacao",
+                    dataEvento="2025-07-04",
+                    dataInicioContrato="",
+                    valorAluguel=3000,
+                    diasVacancia=1,
+                    motivoDesocupacao="",
+                )
+            )
+        },
+        None,
+    )
+
+    assert response["statusCode"] == 201
+    sheets_latest.assert_called_once_with("FLORIANOPOLIS|TOP VISION RESIDENCE|1227")
+    put.assert_called_once()
+    append.assert_called_once()
+
+
+def test_create_locacao_rejects_when_neither_dynamo_nor_sheets_has_desocupacao(monkeypatch):
+    put = Mock()
+    append = Mock()
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(
+        create_movimentacao.dynamo_repo,
+        "latest_movimentacao_for_imovel",
+        Mock(return_value=None),
+    )
+    monkeypatch.setattr(
+        create_movimentacao.google_sheets_repo,
+        "latest_status_evento_by_imovel",
+        Mock(return_value=None),
+    )
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
+
+    response = create_movimentacao.handler(
+        {
+            "body": json.dumps(
+                _desocupacao_payload(
+                    statusEvento="Locacao",
+                    dataEvento="2025-07-04",
+                    dataInicioContrato="",
+                    valorAluguel=3000,
+                    diasVacancia=1,
+                    motivoDesocupacao="",
+                )
+            )
+        },
+        None,
+    )
+
+    assert response["statusCode"] == 409
+    put.assert_not_called()
+    append.assert_not_called()
+
+
+def test_create_locacao_returns_502_when_latest_dynamo_check_fails(monkeypatch):
+    put = Mock()
+    append = Mock()
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(
+        create_movimentacao.dynamo_repo,
+        "latest_movimentacao_for_imovel",
+        Mock(side_effect=RuntimeError("dynamo down")),
+    )
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
+
+    response = create_movimentacao.handler(
+        {
+            "body": json.dumps(
+                _desocupacao_payload(
+                    statusEvento="Locacao",
+                    dataEvento="2025-07-04",
+                    dataInicioContrato="",
+                    valorAluguel=3000,
+                    diasVacancia=1,
+                    motivoDesocupacao="",
+                )
+            )
+        },
+        None,
+    )
+    body = json.loads(response["body"])
+
+    assert response["statusCode"] == 502
+    assert body["message"] == "Falha ao verificar ultimo registro do imovel no DynamoDB"
+    assert body["error"] == "dynamo down"
+    put.assert_not_called()
+    append.assert_not_called()
+
+
+def test_create_locacao_returns_502_when_google_sheets_fallback_fails(monkeypatch):
+    put = Mock()
+    append = Mock()
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "get_imovel", lambda *_: _imovel())
+    monkeypatch.setattr(
+        create_movimentacao.dynamo_repo,
+        "latest_movimentacao_for_imovel",
+        Mock(return_value=None),
+    )
+    monkeypatch.setattr(
+        create_movimentacao.google_sheets_repo,
+        "latest_status_evento_by_imovel",
+        Mock(side_effect=RuntimeError("sheets down")),
+    )
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
+
+    response = create_movimentacao.handler(
+        {
+            "body": json.dumps(
+                _desocupacao_payload(
+                    statusEvento="Locacao",
+                    dataEvento="2025-07-04",
+                    dataInicioContrato="",
+                    valorAluguel=3000,
+                    diasVacancia=1,
+                    motivoDesocupacao="",
+                )
+            )
+        },
+        None,
+    )
+    body = json.loads(response["body"])
+
+    assert response["statusCode"] == 502
+    assert body["message"] == "Falha ao verificar ultimo registro do imovel no Google Sheets"
+    assert body["error"] == "sheets down"
+    put.assert_not_called()
+    append.assert_not_called()
 
 
 def test_create_imovel_invalid_payload_does_not_check_or_persist(monkeypatch):

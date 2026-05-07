@@ -4,7 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import AppHeader from '../components/AppHeader';
 import { env } from '../config/env';
 import { apiService } from '../services/api';
-import { movimentacaoSchema, statusEventoValues, type MovimentacaoForm } from '../services/schemas';
+import {
+  motivoDesocupacaoValues,
+  movimentacaoSchema,
+  statusEventoValues,
+  type MovimentacaoForm,
+} from '../services/schemas';
 import type { Imovel, Movimentacao, MovimentacaoInput } from '../types';
 
 const emptyValues: MovimentacaoForm = {
@@ -53,7 +58,9 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     register,
     handleSubmit,
     reset,
+    setValue,
     watch,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<MovimentacaoForm>({
     resolver: zodResolver(movimentacaoSchema),
@@ -63,6 +70,8 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
   const selectedIdImovel = watch('idImovel');
   const selectedStatusEvento = watch('statusEvento');
   const selectedImovel = imoveis.find((item) => item.idImovel === selectedIdImovel);
+  const isDesocupacao = selectedStatusEvento === 'Desocupacao';
+  const isLocacao = selectedStatusEvento === 'Locacao';
 
   async function refreshMovimentacoes() {
     try {
@@ -86,6 +95,24 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
     refreshMovimentacoes();
     refreshImoveis();
   }, []);
+
+  useEffect(() => {
+    if (selectedStatusEvento === 'Desocupacao') {
+      setValue('valorAluguel', undefined as unknown as number);
+      setValue('diasVacancia', undefined as unknown as number);
+      clearErrors(['valorAluguel', 'diasVacancia']);
+    } else if (selectedStatusEvento === 'Locacao') {
+      setValue('dataInicioContrato', '');
+      setValue('motivoDesocupacao', '');
+      clearErrors(['dataInicioContrato', 'motivoDesocupacao']);
+    } else {
+      setValue('dataInicioContrato', '');
+      setValue('valorAluguel', undefined as unknown as number);
+      setValue('diasVacancia', undefined as unknown as number);
+      setValue('motivoDesocupacao', '');
+      clearErrors(['dataInicioContrato', 'valorAluguel', 'diasVacancia', 'motivoDesocupacao']);
+    }
+  }, [selectedStatusEvento, setValue, clearErrors]);
 
   function onSelectImovel(idImovel: string) {
     setServerError(null);
@@ -280,7 +307,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
               <input
                 id="dataInicioContrato"
                 type="date"
-                disabled={!selectedImovel || isSubmitting}
+                disabled={!isDesocupacao || isSubmitting}
                 {...register('dataInicioContrato')}
               />
               {errors.dataInicioContrato && (
@@ -297,7 +324,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                 type="number"
                 step="0.01"
                 min={0}
-                disabled={!selectedImovel || isSubmitting}
+                disabled={!isLocacao || isSubmitting}
                 {...register('valorAluguel', { valueAsNumber: true })}
               />
               {errors.valorAluguel && (
@@ -314,7 +341,7 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
                 type="number"
                 step="1"
                 min={0}
-                disabled={!selectedImovel || isSubmitting}
+                disabled={!isLocacao || isSubmitting}
                 {...register('diasVacancia', { valueAsNumber: true })}
               />
               {errors.diasVacancia && (
@@ -354,12 +381,18 @@ export function CadastroContent({ embedded = false }: CadastroContentProps) {
             <label htmlFor="motivoDesocupacao">
               Motivo da Desocupacao {selectedStatusEvento === 'Desocupacao' ? '*' : ''}
             </label>
-            <textarea
+            <select
               id="motivoDesocupacao"
-              rows={3}
-              disabled={!selectedImovel || isSubmitting}
+              disabled={!isDesocupacao || isSubmitting}
               {...register('motivoDesocupacao')}
-            />
+            >
+              <option value="">Selecione</option>
+              {motivoDesocupacaoValues.map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
             {errors.motivoDesocupacao && (
               <span className="field-error">{errors.motivoDesocupacao.message}</span>
             )}

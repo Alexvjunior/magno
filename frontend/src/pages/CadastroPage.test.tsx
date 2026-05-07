@@ -23,11 +23,9 @@ async function fillMovimentacaoForm(user: ReturnType<typeof userEvent.setup>) {
   await user.selectOptions(screen.getByLabelText(/Status do Evento/), 'Desocupacao');
   await user.type(screen.getByLabelText(/Data do Evento/), '2025-07-03');
   await user.type(screen.getByLabelText(/Data de Inicio do Contrato/), '2023-10-24');
-  await user.type(screen.getByLabelText(/Valor do Aluguel/), '2500.5');
-  await user.type(screen.getByLabelText(/Dias de Vacancia/), '12');
   await user.type(screen.getByLabelText(/Mes/), '7');
   await user.type(screen.getByLabelText(/Ano/), '2025');
-  await user.type(screen.getByLabelText(/Motivo da Desocupacao/), 'Mudou de estado');
+  await user.selectOptions(screen.getByLabelText(/Motivo da Desocupacao/), 'Mudança geográfica');
 }
 
 describe('CadastroContent', () => {
@@ -72,6 +70,56 @@ describe('CadastroContent', () => {
       }),
     );
     expect(screen.getByLabelText(/Cidade/)).toHaveValue('');
+  });
+
+  it('keeps conditional fields blocked until status evento is selected', async () => {
+    const user = userEvent.setup();
+    apiServiceMock.listImoveis.mockResolvedValue([imovelFixture]);
+    renderWithRouter(<CadastroContent />);
+    await screen.findByText('Nenhum registro ainda. Cadastre o primeiro acima.');
+
+    await user.selectOptions(screen.getByLabelText(/Imovel cadastrado/), imovelFixture.idImovel);
+
+    expect(screen.getByLabelText(/Data de Inicio do Contrato/)).toBeDisabled();
+    expect(screen.getByLabelText(/Valor do Aluguel/)).toBeDisabled();
+    expect(screen.getByLabelText(/Dias de Vacancia/)).toBeDisabled();
+    expect(screen.getByLabelText(/Motivo da Desocupacao/)).toBeDisabled();
+  });
+
+  it('enables only desocupacao fields for Desocupacao status', async () => {
+    const user = userEvent.setup();
+    apiServiceMock.listImoveis.mockResolvedValue([imovelFixture]);
+    renderWithRouter(<CadastroContent />);
+    await screen.findByText('Nenhum registro ainda. Cadastre o primeiro acima.');
+
+    await user.selectOptions(screen.getByLabelText(/Imovel cadastrado/), imovelFixture.idImovel);
+    await user.selectOptions(screen.getByLabelText(/Status do Evento/), 'Desocupacao');
+
+    expect(screen.getByLabelText(/Data de Inicio do Contrato/)).toBeEnabled();
+    expect(screen.getByLabelText(/Motivo da Desocupacao/)).toBeEnabled();
+    expect(screen.getByLabelText(/Valor do Aluguel/)).toBeDisabled();
+    expect(screen.getByLabelText(/Dias de Vacancia/)).toBeDisabled();
+  });
+
+  it('enables only locacao fields and clears desocupacao fields for Locacao status', async () => {
+    const user = userEvent.setup();
+    apiServiceMock.listImoveis.mockResolvedValue([imovelFixture]);
+    renderWithRouter(<CadastroContent />);
+    await screen.findByText('Nenhum registro ainda. Cadastre o primeiro acima.');
+
+    await user.selectOptions(screen.getByLabelText(/Imovel cadastrado/), imovelFixture.idImovel);
+    await user.selectOptions(screen.getByLabelText(/Status do Evento/), 'Desocupacao');
+    await user.type(screen.getByLabelText(/Data de Inicio do Contrato/), '2023-10-24');
+    await user.selectOptions(screen.getByLabelText(/Motivo da Desocupacao/), 'Mudança geográfica');
+
+    await user.selectOptions(screen.getByLabelText(/Status do Evento/), 'Locacao');
+
+    expect(screen.getByLabelText(/Valor do Aluguel/)).toBeEnabled();
+    expect(screen.getByLabelText(/Dias de Vacancia/)).toBeEnabled();
+    expect(screen.getByLabelText(/Data de Inicio do Contrato/)).toBeDisabled();
+    expect(screen.getByLabelText(/Data de Inicio do Contrato/)).toHaveValue('');
+    expect(screen.getByLabelText(/Motivo da Desocupacao/)).toBeDisabled();
+    expect(screen.getByLabelText(/Motivo da Desocupacao/)).toHaveValue('');
   });
 
   it('shows create and initial load errors', async () => {

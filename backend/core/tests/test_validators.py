@@ -17,7 +17,7 @@ def _good_payload(**overrides):
         "dataInicioContrato": "2023-10-24",
         "valorAluguel": 2500.50,
         "diasVacancia": 12,
-        "motivoDesocupacao": "Mudou de estado",
+        "motivoDesocupacao": "Mudança geográfica",
         "mes": 7,
         "ano": 2025,
     }
@@ -43,6 +43,8 @@ def test_validates_good_payload():
     out = validate_movimentacao(_good_payload())
     assert out.id_imovel == "FLORIANOPOLIS|TOP VISION RESIDENCE|1227"
     assert out.status_evento == "Desocupacao"
+    assert out.valor_aluguel is None
+    assert out.dias_vacancia is None
     assert out.mes == 7
     assert out.ano == 2025
 
@@ -69,6 +71,12 @@ def test_rejects_invalid_status_evento():
     with pytest.raises(ValidationError) as ei:
         validate_movimentacao(_good_payload(statusEvento="Vago"))
     assert "statusEvento" in ei.value.errors
+
+
+def test_rejects_invalid_motivo_desocupacao():
+    with pytest.raises(ValidationError) as ei:
+        validate_movimentacao(_good_payload(motivoDesocupacao="Mudou de estado"))
+    assert ei.value.errors["motivoDesocupacao"] == "Selecione um motivo valido"
 
 
 def test_rejects_data_evento_before_data_inicio_contrato():
@@ -112,19 +120,29 @@ def test_requires_conditional_fields_by_status_evento():
     out = validate_movimentacao(
         _good_payload(
             statusEvento="Locacao",
-            dataInicioContrato="",
+            dataInicioContrato="not-a-date",
             valorAluguel=2500,
             diasVacancia=0,
-            motivoDesocupacao="",
+            motivoDesocupacao="Texto livre ignorado",
         )
     )
     assert out.data_inicio_contrato is None
     assert out.motivo_desocupacao is None
+    assert out.valor_aluguel == 2500
+    assert out.dias_vacancia == 0
 
 
 def test_rejects_non_integer_dias_vacancia():
     with pytest.raises(ValidationError) as ei:
-        validate_movimentacao(_good_payload(diasVacancia=1.5))
+        validate_movimentacao(
+            _good_payload(
+                statusEvento="Locacao",
+                dataInicioContrato="",
+                valorAluguel=2500,
+                diasVacancia=1.5,
+                motivoDesocupacao="",
+            )
+        )
     assert "diasVacancia" in ei.value.errors
 
 

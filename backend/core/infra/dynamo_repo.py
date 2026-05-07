@@ -335,6 +335,27 @@ def list_all_pages() -> Iterable[Movimentacao]:
             break
 
 
+def latest_movimentacao_for_imovel(id_imovel: str) -> Movimentacao | None:
+    target = id_imovel.strip()
+    last = None
+    while True:
+        kwargs = {
+            "IndexName": "GSI2",
+            "KeyConditionExpression": Key("GSI2PK").eq(_status_partition_key(ACTIVE_STATUS)),
+            "ScanIndexForward": False,
+        }
+        if last:
+            kwargs["ExclusiveStartKey"] = last
+        resp = _table.query(**kwargs)
+        for item in resp.get("Items", []):
+            if _optional_text(item.get("idImovel")) == target:
+                return _from_item(item)
+        last = resp.get("LastEvaluatedKey")
+        if not last:
+            break
+    return None
+
+
 def mark_deleted(record_id: str, data_evento: date) -> bool:
     key = _item_key(record_id, data_evento)
     gsi2sk = _status_sort_key(data_evento.isoformat(), record_id)

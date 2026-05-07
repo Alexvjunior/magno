@@ -1,4 +1,5 @@
 import os
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 from unittest.mock import Mock
@@ -29,7 +30,7 @@ def _desocupacao() -> Desocupacao:
         data_inicio_contrato=date(2023, 10, 24),
         valor_aluguel=2500.5,
         dias_vacancia=12,
-        motivo_desocupacao="Mudou de estado",
+        motivo_desocupacao="Mudança geográfica",
         mes=7,
         ano=2025,
         criado_por="user-1",
@@ -91,6 +92,49 @@ def test_dynamo_list_all_pages_yields_paginated_records(monkeypatch):
         "PK": "TENANT#default",
         "SK": "MOV#1",
     }
+
+
+def test_dynamo_latest_movimentacao_for_imovel_scans_active_pages_until_match(monkeypatch):
+    target = _desocupacao()
+    other = replace(
+        _desocupacao(),
+        id="other-1",
+        id_imovel="OTHER|BUILDING|101",
+        data_evento=date(2025, 8, 1),
+        mes=8,
+    )
+    table = Mock()
+    table.query.side_effect = [
+        {
+            "Items": [dynamo_repo._to_item(other)],
+            "LastEvaluatedKey": {"PK": "TENANT#default", "SK": "MOV#1"},
+        },
+        {"Items": [dynamo_repo._to_item(target)]},
+    ]
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    out = dynamo_repo.latest_movimentacao_for_imovel(
+        "FLORIANOPOLIS|TOP VISION RESIDENCE|1227"
+    )
+
+    assert out is not None
+    assert out.id == "desoc-1"
+    assert table.query.call_count == 2
+    assert table.query.call_args_list[0].kwargs["IndexName"] == "GSI2"
+    assert table.query.call_args_list[0].kwargs["ScanIndexForward"] is False
+    assert table.query.call_args_list[1].kwargs["ExclusiveStartKey"] == {
+        "PK": "TENANT#default",
+        "SK": "MOV#1",
+    }
+
+
+def test_dynamo_latest_movimentacao_for_imovel_returns_none_without_match(monkeypatch):
+    other = replace(_desocupacao(), id_imovel="OTHER|BUILDING|101")
+    table = Mock()
+    table.query.return_value = {"Items": [dynamo_repo._to_item(other)]}
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    assert dynamo_repo.latest_movimentacao_for_imovel("missing") is None
 
 
 def test_dynamo_from_item_defaults_invalid_legacy_values():

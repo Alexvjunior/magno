@@ -31,6 +31,51 @@ def handler(event: dict, _context) -> dict:
             },
         )
 
+    if validated.status_evento == "Locacao":
+        try:
+            latest = dynamo_repo.latest_movimentacao_for_imovel(validated.id_imovel)
+        except Exception as exc:
+            LOGGER.exception("Failed to validate latest movimentacao %s in DynamoDB", validated.id_imovel)
+            return json_response(
+                502,
+                {
+                    "message": "Falha ao verificar ultimo registro do imovel no DynamoDB",
+                    "idImovel": validated.id_imovel,
+                    "error": str(exc),
+                },
+            )
+
+        if latest is None:
+            try:
+                sheet_status = google_sheets_repo.latest_status_evento_by_imovel(
+                    validated.id_imovel
+                )
+            except Exception as exc:
+                LOGGER.exception(
+                    "Failed to validate latest movimentacao %s in Google Sheets",
+                    validated.id_imovel,
+                )
+                return json_response(
+                    502,
+                    {
+                        "message": "Falha ao verificar ultimo registro do imovel no Google Sheets",
+                        "idImovel": validated.id_imovel,
+                        "error": str(exc),
+                    },
+                )
+            latest_is_desocupacao = sheet_status == "Desocupacao"
+        else:
+            latest_is_desocupacao = latest.status_evento == "Desocupacao"
+
+        if not latest_is_desocupacao:
+            return json_response(
+                409,
+                {
+                    "message": "O imovel nao tem como ultimo registro uma desocupacao.",
+                    "idImovel": validated.id_imovel,
+                },
+            )
+
     user_sub = get_user_sub(event)
     record = Movimentacao(
         id=str(uuid.uuid4()),

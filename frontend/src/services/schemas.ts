@@ -5,6 +5,25 @@ export const tipologiaImovelValues = ['1Q', '2Q', '3Q', '4Q', 'Sala', 'Studio'] 
 export const mobiliadoValues = ['Sim', 'N\u00e3o'] as const;
 export const statusAtualImovelValues = ['Vago', 'Locado'] as const;
 export const statusEventoValues = ['Desocupacao', 'Locacao'] as const;
+export const motivoDesocupacaoValues = [
+  'Barulho',
+  'Comprou um imóvel',
+  'Desacerto comercial',
+  'Desconhecido',
+  'Dificuldade financeira',
+  'Divórcio',
+  'Exoneração garantidora',
+  'Falta manutenção áreas comuns',
+  'Inquilino faleceu',
+  'Mudança de sede física',
+  'Mudança emprego',
+  'Mudança geográfica',
+  'Mudou para sala 712',
+  'Mudou-se para sala maior',
+  'Mudou-se para uma casa',
+  'Problemas de saúde',
+  'Transferência do trabalho',
+] as const;
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const currentYear = new Date().getFullYear();
@@ -17,29 +36,22 @@ const emptyToUndefined = (value: unknown) => {
 
 const optionalDateSchema = z.preprocess(
   emptyToUndefined,
-  z.string().regex(dateRegex, 'Data invalida').optional(),
+  z.custom<string | undefined>(() => true),
 );
 
 const optionalMoneySchema = z.preprocess(
   emptyToUndefined,
-  z
-    .number({ invalid_type_error: 'Informe um numero' })
-    .nonnegative('Nao pode ser negativo')
-    .optional(),
+  z.custom<number | undefined>(() => true),
 );
 
 const optionalIntegerSchema = z.preprocess(
   emptyToUndefined,
-  z
-    .number({ invalid_type_error: 'Informe um numero' })
-    .int('Use numero inteiro')
-    .nonnegative('Nao pode ser negativo')
-    .optional(),
+  z.custom<number | undefined>(() => true),
 );
 
 const optionalMotivoSchema = z.preprocess(
   emptyToUndefined,
-  z.string().trim().min(3, 'Minimo 3 caracteres').max(500, 'Maximo 500 caracteres').optional(),
+  z.custom<string | undefined>(() => true),
 );
 
 export function removeAccents(value: string): string {
@@ -107,6 +119,12 @@ export const movimentacaoSchema = z
           message: 'Obrigatorio',
           path: ['dataInicioContrato'],
         });
+      } else if (typeof d.dataInicioContrato !== 'string' || !dateRegex.test(d.dataInicioContrato)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Data invalida',
+          path: ['dataInicioContrato'],
+        });
       }
       if (!d.motivoDesocupacao) {
         ctx.addIssue({
@@ -114,37 +132,104 @@ export const movimentacaoSchema = z
           message: 'Obrigatorio',
           path: ['motivoDesocupacao'],
         });
+      } else if (
+        typeof d.motivoDesocupacao !== 'string' ||
+        !motivoDesocupacaoValues.includes(
+          d.motivoDesocupacao as (typeof motivoDesocupacaoValues)[number],
+        )
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Selecione um motivo valido',
+          path: ['motivoDesocupacao'],
+        });
       }
     }
 
     if (d.statusEvento === 'Locacao') {
-      if (d.valorAluguel === undefined) {
+      if (d.valorAluguel == null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'Obrigatorio',
           path: ['valorAluguel'],
         });
+      } else if (typeof d.valorAluguel !== 'number' || Number.isNaN(d.valorAluguel)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Informe um numero',
+          path: ['valorAluguel'],
+        });
+      } else if (d.valorAluguel < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Nao pode ser negativo',
+          path: ['valorAluguel'],
+        });
       }
-      if (d.diasVacancia === undefined) {
+      if (d.diasVacancia == null) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'Obrigatorio',
           path: ['diasVacancia'],
         });
+      } else if (typeof d.diasVacancia !== 'number' || Number.isNaN(d.diasVacancia)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Informe um numero',
+          path: ['diasVacancia'],
+        });
+      } else if (!Number.isInteger(d.diasVacancia)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Use numero inteiro',
+          path: ['diasVacancia'],
+        });
+      } else if (d.diasVacancia < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Nao pode ser negativo',
+          path: ['diasVacancia'],
+        });
       }
     }
 
-    if (d.dataInicioContrato && d.dataEvento < d.dataInicioContrato) {
+    if (
+      d.statusEvento === 'Desocupacao' &&
+      typeof d.dataInicioContrato === 'string' &&
+      dateRegex.test(d.dataInicioContrato) &&
+      d.dataEvento < d.dataInicioContrato
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Data do evento deve ser >= data de inicio do contrato',
         path: ['dataEvento'],
       });
     }
+  })
+  .transform((d) => {
+    if (d.statusEvento === 'Desocupacao') {
+      return {
+        ...d,
+        valorAluguel: undefined,
+        diasVacancia: undefined,
+      };
+    }
+    if (d.statusEvento === 'Locacao') {
+      return {
+        ...d,
+        dataInicioContrato: undefined,
+        motivoDesocupacao: undefined,
+      };
+    }
+    return d;
   });
 
-export type MovimentacaoForm = Omit<z.infer<typeof movimentacaoSchema>, 'statusEvento'> & {
+export type MovimentacaoForm = Omit<
+  z.infer<typeof movimentacaoSchema>,
+  'statusEvento' | 'motivoDesocupacao'
+> & {
   statusEvento: (typeof statusEventoValues)[number];
+  motivoDesocupacao?: (typeof motivoDesocupacaoValues)[number] | '';
 };
 
 export const imovelSchema = z.object({

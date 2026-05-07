@@ -15,7 +15,7 @@ const input = {
   dataInicioContrato: '2023-10-24',
   valorAluguel: 2500.5,
   diasVacancia: 12,
-  motivoDesocupacao: 'Mudou de estado',
+  motivoDesocupacao: 'Mudança geográfica',
   mes: 7,
   ano: 2025,
 } as const;

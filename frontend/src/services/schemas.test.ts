@@ -3,6 +3,7 @@ import {
   buildIdImovel,
   imovelSchema,
   loginSchema,
+  motivoDesocupacaoValues,
   movimentacaoSchema,
   newPasswordSchema,
   normalizeImovelText,
@@ -22,7 +23,7 @@ const goodMovimentacao = {
   dataInicioContrato: '2023-10-24',
   valorAluguel: 0,
   diasVacancia: 0,
-  motivoDesocupacao: 'Mudou de estado',
+  motivoDesocupacao: 'Mudança geográfica',
   mes: 1,
   ano: new Date().getFullYear() + 1,
 } as const;
@@ -48,11 +49,10 @@ describe('schemas', () => {
   });
 
   it('accepts valid movimentacao edge values and rejects invalid fields', () => {
-    expect(movimentacaoSchema.parse({ ...goodMovimentacao, mes: 12 })).toMatchObject({
-      mes: 12,
-      valorAluguel: 0,
-      diasVacancia: 0,
-    });
+    const parsed = movimentacaoSchema.parse({ ...goodMovimentacao, mes: 12 });
+    expect(parsed).toMatchObject({ mes: 12 });
+    expect(parsed.valorAluguel).toBeUndefined();
+    expect(parsed.diasVacancia).toBeUndefined();
 
     const result = movimentacaoSchema.safeParse({
       ...goodMovimentacao,
@@ -113,10 +113,51 @@ describe('schemas', () => {
       movimentacaoSchema.safeParse({
         ...goodMovimentacao,
         statusEvento: 'Locacao',
-        dataInicioContrato: '',
-        motivoDesocupacao: '',
+        dataInicioContrato: 'not-a-date',
+        motivoDesocupacao: 'Texto livre invalido',
       }).success,
     ).toBe(true);
+  });
+
+  it('accepts only the configured desocupacao motives', () => {
+    expect(motivoDesocupacaoValues).toEqual([
+      'Barulho',
+      'Comprou um imóvel',
+      'Desacerto comercial',
+      'Desconhecido',
+      'Dificuldade financeira',
+      'Divórcio',
+      'Exoneração garantidora',
+      'Falta manutenção áreas comuns',
+      'Inquilino faleceu',
+      'Mudança de sede física',
+      'Mudança emprego',
+      'Mudança geográfica',
+      'Mudou para sala 712',
+      'Mudou-se para sala maior',
+      'Mudou-se para uma casa',
+      'Problemas de saúde',
+      'Transferência do trabalho',
+    ]);
+
+    expect(
+      movimentacaoSchema.safeParse({
+        ...goodMovimentacao,
+        motivoDesocupacao: 'Mudança geográfica',
+      }).success,
+    ).toBe(true);
+
+    const result = movimentacaoSchema.safeParse({
+      ...goodMovimentacao,
+      motivoDesocupacao: 'Mudou de estado',
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.map((issue) => issue.path.join('.'))).toContain(
+        'motivoDesocupacao',
+      );
+    }
   });
 
   it('validates imovel contract and numeric bounds', () => {

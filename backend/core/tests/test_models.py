@@ -19,7 +19,7 @@ def _desocupacao() -> Desocupacao:
         data_inicio_contrato=date(2023, 10, 24),
         valor_aluguel=2500.5,
         dias_vacancia=12,
-        motivo_desocupacao="Mudou de estado",
+        motivo_desocupacao="Mudança geográfica",
         mes=7,
         ano=2025,
         criado_por="user-1",

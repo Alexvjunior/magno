@@ -22,7 +22,7 @@ def _record() -> Desocupacao:
         data_inicio_contrato=date(2023, 10, 24),
         valor_aluguel=2500.50,
         dias_vacancia=12,
-        motivo_desocupacao="Mudou de estado",
+        motivo_desocupacao="Mudança geográfica",
         mes=7,
         ano=2025,
         criado_por="user-1",
@@ -58,10 +58,66 @@ def test_movimentacao_to_sheet_row_matches_movimentacoes_order():
         "24/10/2023",
         2500.50,
         12,
-        "Mudou de estado",
+        "Mudança geográfica",
         7,
         2025,
     ]
+
+
+def _sheet_row(id_imovel: str, status_evento: str, data_evento: str) -> list[str]:
+    row = [""] * 15
+    row[0] = id_imovel
+    row[7] = status_evento
+    row[8] = data_evento
+    return row
+
+
+def test_latest_status_evento_by_imovel_returns_latest_matching_sheet_status(monkeypatch):
+    service = Mock()
+    spreadsheets = service.spreadsheets.return_value
+    spreadsheets.values.return_value.get.return_value.execute.return_value = {
+        "values": [
+            _sheet_row("ID_Imovel", "Status Evento", "Data Evento"),
+            _sheet_row("FLORIANOPOLIS|TOP VISION RESIDENCE|1227", "Locacao", "2025-07-01"),
+            _sheet_row("OTHER|BUILDING|101", "Locacao", "04/07/2025"),
+            _sheet_row("FLORIANOPOLIS|TOP VISION RESIDENCE|1227", "Desocupacao", "03/07/2025"),
+        ]
+    }
+    monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
+    monkeypatch.setattr(google_sheets_repo, "_sheet_name", lambda: "MOVIMENTACOES")
+    monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
+
+    assert (
+        google_sheets_repo.latest_status_evento_by_imovel(
+            "FLORIANOPOLIS|TOP VISION RESIDENCE|1227"
+        )
+        == "Desocupacao"
+    )
+
+    spreadsheets.values.return_value.get.assert_called_once_with(
+        spreadsheetId="spreadsheet-1",
+        range="MOVIMENTACOES!A:O",
+    )
+    spreadsheets.values.return_value.update.assert_not_called()
+    spreadsheets.batchUpdate.assert_not_called()
+
+
+def test_latest_status_evento_by_imovel_returns_none_when_missing(monkeypatch):
+    service = Mock()
+    spreadsheets = service.spreadsheets.return_value
+    spreadsheets.values.return_value.get.return_value.execute.return_value = {
+        "values": [
+            _sheet_row("ID_Imovel", "Status Evento", "Data Evento"),
+            _sheet_row("OTHER|BUILDING|101", "Locacao", "04/07/2025"),
+        ]
+    }
+    monkeypatch.setattr(google_sheets_repo, "_spreadsheet_id", lambda: "spreadsheet-1")
+    monkeypatch.setattr(google_sheets_repo, "_sheet_name", lambda: "MOVIMENTACOES")
+    monkeypatch.setattr(google_sheets_repo, "_sheets_service", lambda: service)
+
+    assert google_sheets_repo.latest_status_evento_by_imovel("missing") is None
+    spreadsheets.values.return_value.update.assert_not_called()
+    spreadsheets.batchUpdate.assert_not_called()
 
 
 def test_delete_movimentacao_by_imovel_and_date_deletes_matching_sheet_row(monkeypatch):

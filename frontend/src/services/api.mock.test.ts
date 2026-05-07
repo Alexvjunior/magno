@@ -15,7 +15,7 @@ const movimentacaoInput = {
   dataInicioContrato: '2023-10-24',
   valorAluguel: 2500.5,
   diasVacancia: 12,
-  motivoDesocupacao: 'Mudou, disse "ate logo"; linha 2',
+  motivoDesocupacao: 'Mudança geográfica',
   mes: 7,
   ano: 2025,
 } as const;
@@ -58,6 +58,32 @@ describe('mockApi', () => {
     expect(await mockApi.listMovimentacoes()).toHaveLength(0);
   });
 
+  it('requires a previous desocupacao before creating a locacao', async () => {
+    await mockApi.createImovel(imovelInput);
+    const locacaoInput = {
+      ...movimentacaoInput,
+      statusEvento: 'Locacao',
+      dataEvento: '2025-07-04',
+      dataInicioContrato: null,
+      valorAluguel: 3000,
+      diasVacancia: 1,
+      motivoDesocupacao: null,
+    } as const;
+
+    await expect(mockApi.createMovimentacao(locacaoInput)).rejects.toThrow(
+      'O imovel nao tem como ultimo registro uma desocupacao.',
+    );
+
+    await mockApi.createMovimentacao(movimentacaoInput);
+    await expect(mockApi.createMovimentacao(locacaoInput)).resolves.toMatchObject({
+      statusEvento: 'Locacao',
+      valorAluguel: 3000,
+      diasVacancia: 1,
+      dataInicioContrato: null,
+      motivoDesocupacao: null,
+    });
+  });
+
   it('exports filtered movimentacoes as escaped CSV blob', async () => {
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:csv');
     await mockApi.createImovel(imovelInput);
@@ -68,7 +94,7 @@ describe('mockApi', () => {
     expect(exportResult.url).toBe('blob:csv');
     expect(exportResult.filename).toMatch(/^movimentacoes-\d{4}-\d{2}-\d{2}\.csv$/);
     const blob = createObjectURL.mock.calls[0]?.[0] as unknown as Blob;
-    await expect(blob.text()).resolves.toContain('"Mudou, disse ""ate logo""; linha 2"');
+    await expect(blob.text()).resolves.toContain('Mudança geográfica');
   });
 
   it('creates normalized imoveis, rejects duplicates and sorts newest first', async () => {

@@ -35,7 +35,7 @@ def _event() -> dict:
                 "dataInicioContrato": "2023-10-24",
                 "valorAluguel": 2500.50,
                 "diasVacancia": 12,
-                "motivoDesocupacao": "Mudou de estado",
+                "motivoDesocupacao": "Mudança geográfica",
                 "mes": 7,
                 "ano": 2025,
             }

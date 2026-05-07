@@ -16,6 +16,25 @@ ALLOWED_TIPOLOGIAS_IMOVEL = {"1Q", "2Q", "3Q", "4Q", "Sala", "Studio"}
 ALLOWED_MOBILIADO = {"Sim", "N\u00e3o"}
 ALLOWED_STATUS_ATUAL_IMOVEL = {"Vago", "Locado"}
 ALLOWED_STATUS_EVENTOS = {"Desocupacao", "Locacao"}
+ALLOWED_MOTIVOS_DESOCUPACAO = {
+    "Barulho",
+    "Comprou um imóvel",
+    "Desacerto comercial",
+    "Desconhecido",
+    "Dificuldade financeira",
+    "Divórcio",
+    "Exoneração garantidora",
+    "Falta manutenção áreas comuns",
+    "Inquilino faleceu",
+    "Mudança de sede física",
+    "Mudança emprego",
+    "Mudança geográfica",
+    "Mudou para sala 712",
+    "Mudou-se para sala maior",
+    "Mudou-se para uma casa",
+    "Problemas de saúde",
+    "Transferência do trabalho",
+}
 
 
 class ValidationError(Exception):
@@ -131,36 +150,54 @@ def validate_movimentacao(payload: dict[str, Any]) -> MovimentacaoInput:
 
     data_evento = _parse_date(payload.get("dataEvento"), "dataEvento", errors)
 
-    data_inicio_contrato_raw = payload.get("dataInicioContrato")
-    data_inicio_contrato = _parse_optional_date(data_inicio_contrato_raw, "dataInicioContrato", errors)
-    if data_evento and data_inicio_contrato and data_evento < data_inicio_contrato:
-        errors["dataEvento"] = "Data do evento deve ser >= data de inicio do contrato"
-
-    valor_aluguel_raw = payload.get("valorAluguel")
-    valor_aluguel = _optional_number(valor_aluguel_raw, "valorAluguel", errors)
-    if valor_aluguel is not None and valor_aluguel < 0:
-        errors["valorAluguel"] = "Nao pode ser negativo"
-        valor_aluguel = None
-
-    dias_vacancia_raw = payload.get("diasVacancia")
-    dias_vacancia = _optional_number(dias_vacancia_raw, "diasVacancia", errors, integer=True)
-    if dias_vacancia is not None and dias_vacancia < 0:
-        errors["diasVacancia"] = "Nao pode ser negativo"
-        dias_vacancia = None
-
-    motivo_raw = payload.get("motivoDesocupacao")
-    motivo = _optional_str(motivo_raw, "motivoDesocupacao", errors, 3, 500)
+    data_inicio_contrato = None
+    valor_aluguel = None
+    dias_vacancia = None
+    motivo = None
 
     if status_evento == "Desocupacao":
+        data_inicio_contrato_raw = payload.get("dataInicioContrato")
+        data_inicio_contrato = _parse_optional_date(
+            data_inicio_contrato_raw,
+            "dataInicioContrato",
+            errors,
+        )
         if _is_blank(data_inicio_contrato_raw):
             errors["dataInicioContrato"] = "Obrigatorio"
+        if data_evento and data_inicio_contrato and data_evento < data_inicio_contrato:
+            errors["dataEvento"] = "Data do evento deve ser >= data de inicio do contrato"
+
+        motivo_raw = payload.get("motivoDesocupacao")
         if _is_blank(motivo_raw):
             errors["motivoDesocupacao"] = "Obrigatorio"
+        else:
+            motivo = _optional_str(motivo_raw, "motivoDesocupacao", errors, 1, 500)
+            if motivo is not None and motivo not in ALLOWED_MOTIVOS_DESOCUPACAO:
+                errors["motivoDesocupacao"] = "Selecione um motivo valido"
+                motivo = None
     elif status_evento == "Locacao":
+        valor_aluguel_raw = payload.get("valorAluguel")
         if _is_blank(valor_aluguel_raw):
             errors["valorAluguel"] = "Obrigatorio"
+        else:
+            valor_aluguel = _optional_number(valor_aluguel_raw, "valorAluguel", errors)
+            if valor_aluguel is not None and valor_aluguel < 0:
+                errors["valorAluguel"] = "Nao pode ser negativo"
+                valor_aluguel = None
+
+        dias_vacancia_raw = payload.get("diasVacancia")
         if _is_blank(dias_vacancia_raw):
             errors["diasVacancia"] = "Obrigatorio"
+        else:
+            dias_vacancia = _optional_number(
+                dias_vacancia_raw,
+                "diasVacancia",
+                errors,
+                integer=True,
+            )
+            if dias_vacancia is not None and dias_vacancia < 0:
+                errors["diasVacancia"] = "Nao pode ser negativo"
+                dias_vacancia = None
 
     mes = _number(payload.get("mes"), "mes", errors, integer=True)
     if mes is not None and not (1 <= mes <= 12):

@@ -24,6 +24,16 @@ function saveAllImoveis(items: Imovel[]) {
   localStorage.setItem(IMOVEIS_STORAGE_KEY, JSON.stringify(items));
 }
 
+function latestMovimentacaoForImovel(idImovel: string): Movimentacao | undefined {
+  return loadAll()
+    .filter((item) => item.status !== 'DELETED' && item.idImovel === idImovel)
+    .sort((a, b) => {
+      const dateOrder = b.dataEvento.localeCompare(a.dataEvento);
+      if (dateOrder !== 0) return dateOrder;
+      return b.criadoEm.localeCompare(a.criadoEm);
+    })[0];
+}
+
 function uuid(): string {
   if (crypto.randomUUID) return crypto.randomUUID();
   return 'xxxxxxxxxxxx4xxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
@@ -79,6 +89,12 @@ export const mockApi: ApiService = {
     if (!user) throw new Error('Não autenticado');
     const imovel = loadAllImoveis().find((item) => item.idImovel === input.idImovel);
     if (!imovel) throw new Error('Imovel nao encontrado');
+    if (input.statusEvento === 'Locacao') {
+      const latest = latestMovimentacaoForImovel(input.idImovel);
+      if (latest?.statusEvento !== 'Desocupacao') {
+        throw new Error('O imovel nao tem como ultimo registro uma desocupacao.');
+      }
+    }
     const item: Movimentacao = {
       id: uuid(),
       status: 'ACTIVE',

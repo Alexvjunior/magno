@@ -27,11 +27,9 @@ async function fillMovimentacao(page: Page) {
   await page.getByLabel(/Status do Evento/).selectOption('Desocupacao');
   await page.getByLabel(/Data do Evento/).fill('2025-07-03');
   await page.getByLabel(/Data de Inicio do Contrato/).fill('2023-10-24');
-  await page.getByLabel(/Valor do Aluguel/).fill('2500.5');
-  await page.getByLabel(/Dias de Vacancia/).fill('12');
   await page.getByLabel(/Mes/).fill('7');
   await page.getByLabel(/Ano/).fill('2025');
-  await page.getByLabel(/Motivo da Desocupacao/).fill('Mudou de estado');
+  await page.getByLabel(/Motivo da Desocupacao/).selectOption('Mudança geográfica');
 }
 
 test.beforeEach(async ({ page }) => {

@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from datetime import date, datetime
 from functools import lru_cache
 from typing import Any
 
@@ -121,6 +122,39 @@ def append_movimentacao(record: Movimentacao) -> dict[str, Any]:
     )
 
 
+def latest_status_evento_by_imovel(id_imovel: str) -> str | None:
+    spreadsheet_id = _spreadsheet_id()
+    sheet_name = _sheet_name()
+    values = (
+        _sheets_service()
+        .spreadsheets()
+        .values()
+        .get(spreadsheetId=spreadsheet_id, range=f"{sheet_name}!A:O")
+        .execute()
+        .get("values", [])
+    )
+
+    target = id_imovel.strip()
+    latest_date: date | None = None
+    latest_status: str | None = None
+    for index, row in enumerate(values, start=1):
+        if index == 1:
+            continue
+        row_id = str(row[0]).strip() if len(row) >= 1 else ""
+        if row_id != target:
+            continue
+
+        row_status = str(row[7]).strip() if len(row) >= 8 else ""
+        row_date = _parse_sheet_date(str(row[8]).strip() if len(row) >= 9 else "")
+        if not row_status or row_date is None:
+            continue
+        if latest_date is None or row_date >= latest_date:
+            latest_date = row_date
+            latest_status = row_status
+
+    return latest_status
+
+
 def delete_movimentacao_by_imovel_and_date(id_imovel: str, data_evento) -> bool:
     spreadsheet_id = _spreadsheet_id()
     sheet_name = _sheet_name()
@@ -221,6 +255,16 @@ def _find_row_number_by_id(spreadsheet_id: str, sheet_name: str, record_id: str)
     for index, row in enumerate(values, start=1):
         if row and str(row[0]).strip() == record_id:
             return index
+    return None
+
+
+def _parse_sheet_date(value: str) -> date | None:
+    text = value.strip()
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            pass
     return None
 
 
