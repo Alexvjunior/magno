@@ -201,6 +201,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
           <table className="table">
             <thead>
               <tr>
+                <th>Acoes</th>
                 <th>ID</th>
                 <th>Cidade</th>
                 <th>Edificio</th>
@@ -209,7 +210,6 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
                 <th>Tipologia</th>
                 <th>Uso</th>
                 <th>Mobiliado</th>
-                <th>Acoes</th>
               </tr>
             </thead>
             <tbody>
@@ -217,6 +217,16 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
                 const isRemoving = removingIds.has(item.idImovel);
                 return (
                   <tr key={item.idImovel}>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-danger"
+                        onClick={() => onRemove(item)}
+                        disabled={isRemoving}
+                      >
+                        {isRemoving ? 'Removendo...' : 'Remover'}
+                      </button>
+                    </td>
                     <td title={item.idImovel}>
                       {item.idImovel.length > 44
                         ? `${item.idImovel.slice(0, 44)}...`
@@ -229,16 +239,6 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
                     <td>{item.tipologia}</td>
                     <td>{item.uso}</td>
                     <td>{item.mobiliado}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="btn-danger"
-                        onClick={() => onRemove(item)}
-                        disabled={isRemoving}
-                      >
-                        {isRemoving ? 'Removendo...' : 'Remover'}
-                      </button>
-                    </td>
                   </tr>
                 );
               })}
