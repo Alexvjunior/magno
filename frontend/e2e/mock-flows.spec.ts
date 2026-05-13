@@ -77,4 +77,15 @@ test('mock user can manage imoveis and movimentacoes', async ({ page }) => {
   await page.getByRole('button', { name: 'Remover' }).click();
   await expect(page.getByText('Movimentacao removida.')).toBeVisible();
   await expect(page.getByText('Nenhum registro ainda. Cadastre o primeiro acima.')).toBeVisible();
+  await page.getByRole('button', { name: 'Fechar' }).click();
+
+  await openCadastro(page, 'Imoveis');
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Remover' }).click();
+  await expect(page.getByText('Imovel removido.')).toBeVisible();
+  await expect(page.getByText('Nenhum imovel ainda. Cadastre o primeiro acima.')).toBeVisible();
+  await page.getByRole('button', { name: 'Fechar' }).click();
+
+  await openCadastro(page, 'Movimentacoes');
+  await expect(page.getByText('Cadastre um imovel antes de registrar movimentacoes.')).toBeVisible();
 });

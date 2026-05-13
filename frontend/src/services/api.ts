@@ -10,6 +10,7 @@ export interface ApiService {
   listImoveis(): Promise<Imovel[]>;
   exportXlsx(params?: { ano?: number; mes?: number }): Promise<{ url: string; filename: string }>;
   removeMovimentacao(id: string, dataEvento: string): Promise<{ id: string; status: 'DELETED' }>;
+  removeImovel(idImovel: string): Promise<{ idImovel: string; status: 'DELETED' }>;
 }
 
 export class HttpApi implements ApiService {
@@ -82,6 +83,13 @@ export class HttpApi implements ApiService {
     const qs = new URLSearchParams({ dataEvento });
     return this.request<{ id: string; status: 'DELETED' }>(
       `/movimentacoes/${encodeURIComponent(id)}?${qs}`,
+      { method: 'DELETE' },
+    );
+  }
+
+  removeImovel(idImovel: string): Promise<{ idImovel: string; status: 'DELETED' }> {
+    return this.request<{ idImovel: string; status: 'DELETED' }>(
+      `/imoveis/${encodeURIComponent(idImovel)}`,
       { method: 'DELETE' },
     );
   }

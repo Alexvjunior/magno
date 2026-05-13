@@ -50,16 +50,23 @@ describe('HttpApi', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ url: 'u', filename: 'f' }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'a/b', status: 'DELETED' }), { status: 200 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'a/b', status: 'DELETED' }), { status: 200 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ idImovel: 'CITY|BUILDING|101', status: 'DELETED' }), {
+          status: 200,
+        }),
+      );
 
     await api.listMovimentacoes({ ano: 2025, mes: 7 });
     await api.exportXlsx({ ano: 2025, mes: 7 });
     await api.removeMovimentacao('a/b', '2025-07-03');
+    await api.removeImovel('CITY|BUILDING|101');
 
     expect(vi.mocked(fetch).mock.calls.map((call) => call[0])).toEqual([
       'https://api.example.com/movimentacoes?ano=2025&mes=7',
       'https://api.example.com/movimentacoes/export?ano=2025&mes=7',
       'https://api.example.com/movimentacoes/a%2Fb?dataEvento=2025-07-03',
+      'https://api.example.com/imoveis/CITY%7CBUILDING%7C101',
     ]);
   });
 

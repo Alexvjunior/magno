@@ -59,5 +59,6 @@ def test_imovel_to_item_and_api_dict_format_dates_and_field_names():
     assert record.to_item()["id_imovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
     assert "data_ultima_locacao" not in record.to_item()
     assert record.to_api_dict()["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
+    assert record.to_api_dict()["status"] == "ACTIVE"
     assert "dataUltimaLocacao" not in record.to_api_dict()
     assert "id_imovel" not in record.to_api_dict()

@@ -112,6 +112,7 @@ describe('mockApi', () => {
     const first = await mockApi.createImovel(imovelInput);
     expect(first).toMatchObject({
       idImovel: 'FLORIANOPOLIS|PLAZA MEDITERRANEO|326',
+      status: 'ACTIVE',
       cidade: 'Florianopolis',
       edificio: 'Plaza Mediterraneo',
       numeroApto: '326',
@@ -130,5 +131,21 @@ describe('mockApi', () => {
       second.idImovel,
       first.idImovel,
     ]);
+  });
+
+  it('marks imoveis as deleted, hides them, blocks movimentacoes and keeps duplicate protection', async () => {
+    const created = await mockApi.createImovel(imovelInput);
+
+    await expect(mockApi.removeImovel('missing')).rejects.toThrow('Imovel nao encontrado');
+    await expect(mockApi.removeImovel(created.idImovel)).resolves.toEqual({
+      idImovel: created.idImovel,
+      status: 'DELETED',
+    });
+
+    await expect(mockApi.listImoveis()).resolves.toHaveLength(0);
+    await expect(mockApi.createMovimentacao(movimentacaoInput)).rejects.toThrow(
+      'Imovel nao encontrado',
+    );
+    await expect(mockApi.createImovel(imovelInput)).rejects.toThrow('Este imovel ja foi cadastrado.');
   });
 });

@@ -84,6 +84,7 @@ def _to_imovel_item(imovel: Imovel) -> dict:
         "SK": f"IMOVEL#{imovel.id_imovel}",
         "entityType": "IMOVEL",
         "idImovel": imovel.id_imovel,
+        "status": imovel.status,
         "cidade": imovel.cidade,
         "edificio": imovel.edificio,
         "numeroApto": imovel.numero_apto,
@@ -220,6 +221,7 @@ def _from_item(item: dict) -> Movimentacao:
 def _from_imovel_item(item: dict) -> Imovel:
     return Imovel(
         id_imovel=_text(item.get("idImovel"), "sem-id"),
+        status=_record_status(item.get("status")),
         cidade=_text(item.get("cidade")),
         edificio=_text(item.get("edificio")),
         numero_apto=_text(item.get("numeroApto")),
@@ -292,6 +294,7 @@ def list_imoveis(limit: int = 200) -> list[Imovel]:
             break
 
     records = [_from_imovel_item(item) for item in items]
+    records = [item for item in records if item.status != DELETED_STATUS]
     records.sort(key=lambda item: (item.criado_em, item.id_imovel), reverse=True)
     return records[:limit]
 
@@ -370,6 +373,22 @@ def mark_deleted(record_id: str, data_evento: date) -> bool:
                 ":gsi2pk": _status_partition_key(DELETED_STATUS),
                 ":gsi2sk": gsi2sk,
             },
+        )
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+            return False
+        raise
+    return True
+
+
+def mark_imovel_deleted(id_imovel: str) -> bool:
+    try:
+        _table.update_item(
+            Key=_imovel_key(id_imovel),
+            UpdateExpression="SET #status = :deleted",
+            ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
+            ExpressionAttributeNames={"#status": "status"},
+            ExpressionAttributeValues={":deleted": DELETED_STATUS},
         )
     except ClientError as exc:
         if exc.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":

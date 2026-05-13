@@ -12,6 +12,7 @@ const apiServiceMock = vi.hoisted(() => ({
   listImoveis: vi.fn(),
   exportXlsx: vi.fn(),
   removeMovimentacao: vi.fn(),
+  removeImovel: vi.fn(),
 }));
 
 vi.mock('../services/api', () => ({
@@ -84,5 +85,44 @@ describe('CadastroImoveisContent', () => {
     expect(await screen.findByText('Plaza Mediterraneo')).toBeInTheDocument();
     expect(screen.getByText('72.50')).toBeInTheDocument();
     expect(screen.getByTitle(imovelFixture.idImovel)).toBeInTheDocument();
+  });
+
+  it('removes only after confirmation and refreshes on success', async () => {
+    const user = userEvent.setup();
+    apiServiceMock.listImoveis
+      .mockResolvedValueOnce([imovelFixture])
+      .mockResolvedValueOnce([]);
+    apiServiceMock.removeImovel.mockResolvedValue({
+      idImovel: imovelFixture.idImovel,
+      status: 'DELETED',
+    });
+    const confirm = vi.spyOn(window, 'confirm');
+    renderWithRouter(<CadastroImoveisContent />);
+    await screen.findByText('Plaza Mediterraneo');
+
+    confirm.mockReturnValueOnce(false);
+    await user.click(screen.getByRole('button', { name: 'Remover' }));
+    expect(apiServiceMock.removeImovel).not.toHaveBeenCalled();
+
+    confirm.mockReturnValueOnce(true);
+    await user.click(screen.getByRole('button', { name: 'Remover' }));
+
+    expect(await screen.findByText('Imovel removido.')).toBeInTheDocument();
+    expect(apiServiceMock.removeImovel).toHaveBeenCalledWith(imovelFixture.idImovel);
+    expect(await screen.findByText('Nenhum imovel ainda. Cadastre o primeiro acima.')).toBeInTheDocument();
+  });
+
+  it('shows remove errors and clears the removing state', async () => {
+    const user = userEvent.setup();
+    apiServiceMock.listImoveis.mockResolvedValue([imovelFixture]);
+    apiServiceMock.removeImovel.mockRejectedValue(new Error('Falha ao remover imovel'));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderWithRouter(<CadastroImoveisContent />);
+    await screen.findByText('Plaza Mediterraneo');
+
+    await user.click(screen.getByRole('button', { name: 'Remover' }));
+
+    expect(await screen.findByText('Falha ao remover imovel')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Remover' })).toBeEnabled();
   });
 });

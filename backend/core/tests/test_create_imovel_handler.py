@@ -60,6 +60,7 @@ def test_handler_saves_to_dynamo_only(monkeypatch):
     def put(record):
         calls.append("put")
         assert record.id_imovel == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
+        assert record.status == "ACTIVE"
 
     monkeypatch.setattr(create_imovel.dynamo_repo, "imovel_exists_by_id", dynamo_exists)
     monkeypatch.setattr(create_imovel.dynamo_repo, "put_imovel", put)
@@ -71,6 +72,7 @@ def test_handler_saves_to_dynamo_only(monkeypatch):
     assert body["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
     assert body["cidade"] == "Florianopolis"
     assert body["edificio"] == "Plaza Mediterraneo"
+    assert body["status"] == "ACTIVE"
     assert body["criadoPor"] == "user-1"
     assert calls == ["dynamo_exists", "put"]
 

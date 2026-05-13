@@ -7,6 +7,7 @@
 | POST   | `/movimentacoes`              | JWT  |
 | POST   | `/imoveis`                    | JWT  |
 | GET    | `/imoveis`                    | JWT  |
+| DELETE | `/imoveis/{idImovel}`         | JWT  |
 | GET    | `/movimentacoes?ano=&mes=`    | JWT  |
 | DELETE | `/movimentacoes/{id}?dataEvento=YYYY-MM-DD` | JWT |
 | GET    | `/movimentacoes/export?ano=&mes=` | JWT |

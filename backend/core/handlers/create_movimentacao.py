@@ -22,7 +22,7 @@ def handler(event: dict, _context) -> dict:
         return json_response(422, {"errors": e.errors})
 
     imovel = dynamo_repo.get_imovel(validated.id_imovel)
-    if imovel is None:
+    if imovel is None or imovel.status == "DELETED":
         return json_response(
             404,
             {

@@ -34,6 +34,10 @@ function latestMovimentacaoForImovel(idImovel: string): Movimentacao | undefined
     })[0];
 }
 
+function isActiveImovel(item: Imovel): boolean {
+  return item.status !== 'DELETED';
+}
+
 function uuid(): string {
   if (crypto.randomUUID) return crypto.randomUUID();
   return 'xxxxxxxxxxxx4xxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
@@ -87,7 +91,9 @@ export const mockApi: ApiService = {
   async createMovimentacao(input: MovimentacaoInput): Promise<Movimentacao> {
     const user = mockAuth.getCurrentUser();
     if (!user) throw new Error('Não autenticado');
-    const imovel = loadAllImoveis().find((item) => item.idImovel === input.idImovel);
+    const imovel = loadAllImoveis().find(
+      (item) => item.idImovel === input.idImovel && isActiveImovel(item),
+    );
     if (!imovel) throw new Error('Imovel nao encontrado');
     if (input.statusEvento === 'Locacao') {
       const latest = latestMovimentacaoForImovel(input.idImovel);
@@ -137,6 +143,7 @@ export const mockApi: ApiService = {
 
     const item: Imovel = {
       idImovel,
+      status: 'ACTIVE',
       ...normalizedInput,
       criadoPor: user.sub,
       criadoEm: new Date().toISOString(),
@@ -157,7 +164,9 @@ export const mockApi: ApiService = {
   },
 
   async listImoveis(): Promise<Imovel[]> {
-    return loadAllImoveis().sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+    return loadAllImoveis()
+      .filter(isActiveImovel)
+      .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
   },
 
   async exportXlsx(params: { ano?: number; mes?: number } = {}): Promise<{ url: string; filename: string }> {
@@ -177,5 +186,14 @@ export const mockApi: ApiService = {
     all[index] = { ...all[index], status: 'DELETED' };
     saveAll(all);
     return { id, status: 'DELETED' };
+  },
+
+  async removeImovel(idImovel: string): Promise<{ idImovel: string; status: 'DELETED' }> {
+    const all = loadAllImoveis();
+    const index = all.findIndex((item) => item.idImovel === idImovel);
+    if (index === -1) throw new Error('Imovel nao encontrado');
+    all[index] = { ...all[index], status: 'DELETED' };
+    saveAllImoveis(all);
+    return { idImovel, status: 'DELETED' };
   },
 };

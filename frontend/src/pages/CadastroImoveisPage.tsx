@@ -30,6 +30,7 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
   const [items, setItems] = useState<Imovel[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
 
   const {
     register,
@@ -72,6 +73,30 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
       refresh();
     } catch (e) {
       setServerError(e instanceof Error ? e.message : 'Falha ao cadastrar imovel');
+    }
+  }
+
+  async function onRemove(item: Imovel) {
+    const confirmed = window.confirm(
+      `Remover o imovel ${item.edificio} - apto ${item.numeroApto}?`,
+    );
+    if (!confirmed) return;
+
+    setServerError(null);
+    setSuccess(null);
+    setRemovingIds((current) => new Set(current).add(item.idImovel));
+    try {
+      await apiService.removeImovel(item.idImovel);
+      setSuccess('Imovel removido.');
+      await refresh();
+    } catch (e) {
+      setServerError(e instanceof Error ? e.message : 'Falha ao remover imovel');
+    } finally {
+      setRemovingIds((current) => {
+        const next = new Set(current);
+        next.delete(item.idImovel);
+        return next;
+      });
     }
   }
 
@@ -184,25 +209,39 @@ export function CadastroImoveisContent({ embedded = false }: CadastroImoveisCont
                 <th>Tipologia</th>
                 <th>Uso</th>
                 <th>Mobiliado</th>
+                <th>Acoes</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.idImovel}>
-                  <td title={item.idImovel}>
-                    {item.idImovel.length > 44
-                      ? `${item.idImovel.slice(0, 44)}...`
-                      : item.idImovel}
-                  </td>
-                  <td>{item.cidade}</td>
-                  <td>{item.edificio}</td>
-                  <td>{item.numeroApto}</td>
-                  <td>{item.areaPrivativa.toFixed(2)}</td>
-                  <td>{item.tipologia}</td>
-                  <td>{item.uso}</td>
-                  <td>{item.mobiliado}</td>
-                </tr>
-              ))}
+              {items.map((item) => {
+                const isRemoving = removingIds.has(item.idImovel);
+                return (
+                  <tr key={item.idImovel}>
+                    <td title={item.idImovel}>
+                      {item.idImovel.length > 44
+                        ? `${item.idImovel.slice(0, 44)}...`
+                        : item.idImovel}
+                    </td>
+                    <td>{item.cidade}</td>
+                    <td>{item.edificio}</td>
+                    <td>{item.numeroApto}</td>
+                    <td>{item.areaPrivativa.toFixed(2)}</td>
+                    <td>{item.tipologia}</td>
+                    <td>{item.uso}</td>
+                    <td>{item.mobiliado}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-danger"
+                        onClick={() => onRemove(item)}
+                        disabled={isRemoving}
+                      >
+                        {isRemoving ? 'Removendo...' : 'Remover'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

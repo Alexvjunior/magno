@@ -213,6 +213,25 @@ Resources:
             Method: GET
             Path: /imoveis
 
+  DeleteImovelFn:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${AppName}-${Environment}-delete-imovel
+      CodeUri: .
+      Handler: handlers.delete_imovel.handler
+      Layers:
+        - !Ref DepsLayerArn
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RegistrosTable
+      Events:
+        DeleteImovel:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Method: DELETE
+            Path: /imoveis/{idImovel}
+
   DeleteMovimentacaoFn:
     Type: AWS::Serverless::Function
     Properties:

@@ -46,6 +46,7 @@ def handler(event: dict, _context) -> dict:
 
     record = Imovel(
         id_imovel=validated.id_imovel,
+        status="ACTIVE",
         cidade=validated.cidade,
         edificio=validated.edificio,
         numero_apto=validated.numero_apto,

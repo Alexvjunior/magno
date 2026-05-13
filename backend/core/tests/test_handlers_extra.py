@@ -130,6 +130,26 @@ def test_create_movimentacao_without_user_claim_uses_anonymous(monkeypatch):
     assert json.loads(response["body"])["criadoPor"] == "anonymous"
 
 
+def test_create_movimentacao_treats_deleted_imovel_as_not_found(monkeypatch):
+    put = Mock()
+    append = Mock()
+    monkeypatch.setattr(
+        create_movimentacao.dynamo_repo,
+        "get_imovel",
+        lambda *_: replace(_imovel(), status="DELETED"),
+    )
+    monkeypatch.setattr(create_movimentacao.dynamo_repo, "put", put)
+    monkeypatch.setattr(create_movimentacao.google_sheets_repo, "append_movimentacao", append)
+
+    response = create_movimentacao.handler({"body": json.dumps(_desocupacao_payload())}, None)
+    body = json.loads(response["body"])
+
+    assert response["statusCode"] == 404
+    assert body["message"] == "Imovel nao encontrado"
+    put.assert_not_called()
+    append.assert_not_called()
+
+
 def test_create_locacao_accepts_when_latest_dynamo_record_is_desocupacao(monkeypatch):
     put = Mock()
     append = Mock()

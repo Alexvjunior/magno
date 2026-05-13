@@ -24,6 +24,7 @@ export const movimentacaoFixture: Movimentacao = {
 
 export const imovelFixture: Imovel = {
   idImovel: 'FLORIANOPOLIS|PLAZA MEDITERRANEO|326',
+  status: 'ACTIVE',
   cidade: 'Florianopolis',
   edificio: 'Plaza Mediterraneo',
   numeroApto: '326',

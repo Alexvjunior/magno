@@ -109,6 +109,7 @@ class Imovel:
     mobiliado: Mobiliado
     criado_por: str
     criado_em: str  # ISO timestamp
+    status: RecordStatus = "ACTIVE"
 
     def to_item(self) -> dict:
         return asdict(self)
@@ -116,6 +117,7 @@ class Imovel:
     def to_api_dict(self) -> dict:
         return {
             "idImovel": self.id_imovel,
+            "status": self.status,
             "cidade": self.cidade,
             "edificio": self.edificio,
             "numeroApto": self.numero_apto,

@@ -130,6 +130,7 @@ def test_to_imovel_item_uses_imovel_entity_key():
     assert item["SK"] == "IMOVEL#FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
     assert item["entityType"] == "IMOVEL"
     assert item["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
+    assert item["status"] == "ACTIVE"
     assert item["cidade"] == "Florianopolis"
     assert item["areaPrivativa"] == Decimal("72.5")
     assert "valorAluguelAtual" not in item
@@ -149,6 +150,7 @@ def test_from_imovel_item_maps_current_contract():
     assert out.uso == "Residencial"
     assert out.mobiliado == _imovel().mobiliado
     assert out.criado_por == "user-1"
+    assert out.status == "ACTIVE"
     assert out.to_api_dict()["idImovel"] == "FLORIANOPOLIS|PLAZA MEDITERRANEO|326"
 
 
@@ -234,6 +236,13 @@ def test_get_imovel_returns_none_when_missing(monkeypatch):
     assert dynamo_repo.get_imovel("missing") is None
 
 
+def test_from_imovel_item_defaults_legacy_status_to_active():
+    item = dynamo_repo._to_imovel_item(_imovel())
+    item.pop("status")
+
+    assert dynamo_repo._from_imovel_item(item).status == "ACTIVE"
+
+
 def test_list_imoveis_queries_prefix_pages_and_sorts_by_criado_em(monkeypatch):
     older = replace(
         _imovel(),
@@ -245,13 +254,19 @@ def test_list_imoveis_queries_prefix_pages_and_sorts_by_criado_em(monkeypatch):
         id_imovel="SAO JOSE|RESIDENCIAL ILHA|1201",
         criado_em="2025-05-03T12:00:00Z",
     )
+    deleted = replace(
+        _imovel(),
+        id_imovel="SAO JOSE|RESIDENCIAL ILHA|1202",
+        criado_em="2025-05-04T12:00:00Z",
+        status="DELETED",
+    )
     table = Mock()
     table.query.side_effect = [
         {
             "Items": [dynamo_repo._to_imovel_item(older)],
             "LastEvaluatedKey": {"PK": "TENANT#default", "SK": "IMOVEL#OLD"},
         },
-        {"Items": [dynamo_repo._to_imovel_item(newer)]},
+        {"Items": [dynamo_repo._to_imovel_item(newer), dynamo_repo._to_imovel_item(deleted)]},
     ]
     monkeypatch.setattr(dynamo_repo, "_table", table)
 
@@ -263,6 +278,33 @@ def test_list_imoveis_queries_prefix_pages_and_sorts_by_criado_em(monkeypatch):
     second_call = table.query.call_args_list[1].kwargs
     assert "KeyConditionExpression" in first_call
     assert second_call["ExclusiveStartKey"] == {"PK": "TENANT#default", "SK": "IMOVEL#OLD"}
+
+
+def test_mark_imovel_deleted_updates_status(monkeypatch):
+    table = Mock()
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    assert dynamo_repo.mark_imovel_deleted("FLORIANOPOLIS|PLAZA MEDITERRANEO|326") is True
+
+    table.update_item.assert_called_once()
+    kwargs = table.update_item.call_args.kwargs
+    assert kwargs["Key"] == {
+        "PK": "TENANT#default",
+        "SK": "IMOVEL#FLORIANOPOLIS|PLAZA MEDITERRANEO|326",
+    }
+    assert kwargs["ExpressionAttributeValues"][":deleted"] == "DELETED"
+
+
+def test_mark_imovel_deleted_returns_false_for_missing_item(monkeypatch):
+    error = ClientError(
+        {"Error": {"Code": "ConditionalCheckFailedException", "Message": "missing"}},
+        "UpdateItem",
+    )
+    table = Mock()
+    table.update_item.side_effect = error
+    monkeypatch.setattr(dynamo_repo, "_table", table)
+
+    assert dynamo_repo.mark_imovel_deleted("missing") is False
 
 
 def test_put_imovel_raises_duplicate_for_conditional_failure(monkeypatch):

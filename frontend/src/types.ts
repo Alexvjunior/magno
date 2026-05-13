@@ -42,6 +42,7 @@ export interface ImovelInput {
 
 export interface Imovel extends ImovelInput {
   idImovel: string;
+  status: RecordStatus;
   criadoPor: string;
   criadoEm: string; // ISO timestamp
 }

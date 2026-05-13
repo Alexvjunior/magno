@@ -12,6 +12,7 @@ const apiServiceMock = vi.hoisted(() => ({
   listImoveis: vi.fn(),
   exportXlsx: vi.fn(),
   removeMovimentacao: vi.fn(),
+  removeImovel: vi.fn(),
 }));
 
 vi.mock('../services/api', () => ({
